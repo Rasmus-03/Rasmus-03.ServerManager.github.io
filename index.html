@@ -1125,7 +1125,9 @@ async function smSearchMods() {
         : (m.available === true && m.build ? ' <span class="pill blue">' + smEsc(m.build) + "</span>" : "")) +
       (m.description ? ' <span class="dim">— ' + smEsc(m.description) + "</span>" : "") + "</span>" +
       '<span class="dim">' + (m.downloads ? Math.round(m.downloads / 1000) + "k" : "") + "</span>" +
-      '<button class="btn small"' + (m.available === false ? ' data-mod-untagged="1"' : "") +
+      '<button class="btn small"' + (m.available === false
+        ? ' data-mod-untagged="1" data-mod-newest="' + smEsc(m.newest || "") + '"'
+        : "") +
       ' data-mod-install="' + smEsc(m.id) + '" data-mod-source="' +
       smEsc(m.source || "modrinth") + '">' +
       (m.available === false ? "Install anyway" : "Install") + "</button></div>"
@@ -1222,9 +1224,11 @@ document.getElementById("mod-results").addEventListener("click", async (ev) => {
   // A project with no matching build is not hidden: it is offered with the
   // price named, and only an explicit yes downloads it.
   const untagged = btn.dataset.modUntagged === "1";
+  const newest = btn.dataset.modNewest || "";
   if (untagged && !confirm("No build of this project is tagged for Minecraft " +
       (modMeta.version || "this server") + ".\n\nInstall its newest " +
-      (modMeta.loader || "") + " build anyway? The server may refuse to load it.")) return;
+      (modMeta.loader || "") + " build" + (newest ? " (" + newest + ")" : "") +
+      " anyway? The server may refuse to load it.")) return;
   btn.disabled = true;
   msg.textContent = "installing…";
   try {
