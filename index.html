@@ -224,6 +224,7 @@
         <button class="btn block" id="machine-restart" title="Restart the Mac">
           <svg class="icon"><use href="#i-restart"/></svg>Restart Mac
         </button>
+        <div class="dim" id="machine-hint" style="display:none;font-size:11px;line-height:1.3"></div>
         <button class="btn block" id="disconnect">
           <svg class="icon"><use href="#i-logout"/></svg>Disconnect
         </button>
@@ -574,12 +575,20 @@ async function getStatus() {
     pill($("net-orca"), d.orca.web_up ? "Reachable (Mac only)" : "Offline",
          d.orca.web_up ? "up" : "down");
 
+    // Kept clickable on purpose: a greyed-out button explains nothing, while the
+    // backend's refusal says exactly which prerequisite is missing.
     const machine = d.machine || {};
-    const mbtn = $("machine-restart");
-    mbtn.disabled = !machine.can_restart || !machine.auto_login;
-    mbtn.title = !machine.auto_login
-      ? "Turn on automatic login first (System Settings > Users & Groups)"
-      : (!machine.can_restart ? "No passwordless shutdown rule installed yet" : "Restart the Mac");
+    const hint = $("machine-hint");
+    if (!machine.auto_login) {
+      hint.style.display = "block";
+      hint.textContent = "Needs automatic login (System Settings > Users & Groups)";
+    } else if (!machine.can_restart) {
+      hint.style.display = "block";
+      hint.textContent = "Needs the passwordless shutdown rule";
+    } else {
+      hint.style.display = "none";
+      hint.textContent = "";
+    }
   } catch (e) {
     if (String(e.message) !== "unauthorized") $("page-sub").textContent = "Server Manager · connection lost, retrying";
   }
@@ -839,7 +848,8 @@ document.getElementById("machine-restart").addEventListener("click", async () =>
     btn.textContent = "Restarting…";
   } catch (e) {
     btn.disabled = false;
-    alert("Restart failed: " + e.message);
+    btn.textContent = "Restart Mac";
+    alert("Restart not started: " + e.message);
   }
 });
 
