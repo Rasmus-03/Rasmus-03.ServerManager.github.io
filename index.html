@@ -302,6 +302,12 @@
             <div class="row"><span>Uptime</span><span id="orca-uptime">–</span></div>
             <div class="row"><span>Port</span><span id="orca-port">–</span></div>
           </div>
+          <div class="buttons">
+            <button class="btn" id="orca-restart">
+              <svg class="icon"><use href="#i-restart"/></svg>Restart Orca
+            </button>
+            <span class="msg" id="orca-msg"></span>
+          </div>
           <p class="msg" style="margin:12px 0 0" id="orca-note">
             Orca Web only listens on the Mac's own network; it is not reachable through the dashboard tunnel.
           </p>
@@ -843,6 +849,22 @@ document.getElementById("eula-toggle").addEventListener("click", async () => {
     await smPost("/api/eula", { accepted: !current.accepted });
     smLoadProperties();
   } catch (e) { smMsg("srv-msg", e.message, true); }
+});
+
+document.getElementById("orca-restart").addEventListener("click", async () => {
+  const btn = document.getElementById("orca-restart");
+  const msg = document.getElementById("orca-msg");
+  btn.disabled = true;
+  msg.textContent = "restarting…";
+  try {
+    const d = await smPost("/api/orca/restart", {});
+    msg.textContent = d.web_up ? "restarted in " + d.seconds + "s" : "restarted, web UI still starting";
+    getStatus();
+  } catch (e) {
+    msg.textContent = e.message;
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 document.getElementById("machine-restart").addEventListener("click", async () => {
