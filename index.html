@@ -976,7 +976,12 @@ document.getElementById("btn-players").addEventListener("click", async () => {
   const out = document.getElementById("cmd-out");
   try {
     const d = await smGet("/api/players");
-    out.textContent = d.raw || ("online " + d.online + "/" + d.max + ": " + (d.names || []).join(", "));
+    if (d.note) {
+      out.textContent = d.note;
+      return;
+    }
+    const names = (d.names || []).join(", ");
+    out.textContent = d.raw || ("online " + d.online + "/" + d.max + (names ? ": " + names : ""));
   } catch (e) { out.textContent = e.message; }
 });
 
