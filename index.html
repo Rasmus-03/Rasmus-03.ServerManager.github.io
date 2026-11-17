@@ -352,7 +352,9 @@
 
     <section class="tab hidden" id="tab-console">
       <div class="card">
-        <div class="card-head"><svg class="icon"><use href="#i-terminal"/></svg><h2>Console</h2></div>
+        <div class="card-head"><svg class="icon"><use href="#i-terminal"/></svg><h2>Console</h2>
+          <span class="dim" id="log-source" style="margin-left:auto;font-size:11px"></span>
+        </div>
         <pre class="logbox" id="log">loading…</pre>
       </div>
     </section>
@@ -671,6 +673,8 @@ async function getLog() {
     const atBottom = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 40;
     pre.textContent = d.log || "(empty)";
     if (atBottom) pre.scrollTop = pre.scrollHeight;
+    const source = $("log-source");
+    if (source) source.textContent = d.source ? "live · " + d.source.split("/").slice(-2).join("/") : "";
   } catch (e) {}
 }
 
