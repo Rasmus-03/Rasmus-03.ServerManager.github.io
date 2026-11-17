@@ -218,7 +218,7 @@
     <div class="card">
       <div class="card-head"><svg class="icon"><use href="#i-bolt"/></svg><h2>Quick Actions</h2></div>
       <div class="quick-actions">
-        <button class="btn block" data-copy="stardom-michaels.tun.ply.gg:28984">
+        <button class="btn block" data-copy-address>
           <svg class="icon"><use href="#i-copy"/></svg>Copy server address
         </button>
         <button class="btn block" id="disconnect">
@@ -269,10 +269,10 @@
           </div>
           <div class="address">
             <div>
-              <div class="addr-label">Playit endpoint</div>
-              <div class="addr-value">stardom-michaels.tun.ply.gg:28984</div>
+              <div class="addr-label">Join address</div>
+              <div class="addr-value" data-address>–</div>
             </div>
-            <button class="btn" data-copy="stardom-michaels.tun.ply.gg:28984">
+            <button class="btn" data-copy-address>
               <svg class="icon"><use href="#i-copy"/></svg>Copy
             </button>
           </div>
@@ -560,7 +560,14 @@ async function getStatus() {
     $("orca-port").textContent = `:${d.orca.port}`;
 
     $("net-local").textContent = `127.0.0.1:${mc.port}`;
-    $("net-address").textContent = (d.playit || {}).address || "–";
+    const joinAddress = (d.playit || {}).address || "–";
+    $("net-address").textContent = joinAddress;
+    document.querySelectorAll("[data-address]").forEach((el) => {
+      el.textContent = joinAddress;
+    });
+    document.querySelectorAll("[data-copy-address]").forEach((btn) => {
+      btn.dataset.copy = joinAddress === "–" ? "" : joinAddress;
+    });
     pill($("net-orca"), d.orca.web_up ? "Reachable (Mac only)" : "Offline",
          d.orca.web_up ? "up" : "down");
   } catch (e) {
@@ -934,7 +941,8 @@ document.querySelectorAll("[data-action]").forEach((btn) =>
 document.querySelectorAll("[data-copy]").forEach((btn) =>
   btn.addEventListener("click", async () => {
     const original = btn.innerHTML;
-    try { await navigator.clipboard.writeText(btn.dataset.copy); btn.textContent = "Copied"; }
+    try { if (!btn.dataset.copy) return;
+      await navigator.clipboard.writeText(btn.dataset.copy); btn.textContent = "Copied"; }
     catch (e) { btn.textContent = "Copy failed"; }
     setTimeout(() => { btn.innerHTML = original; }, 1500);
   }));
