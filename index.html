@@ -54,6 +54,8 @@
   .card-head h2{font-size:13px;font-weight:600;margin:0}
   .card-head .icon{color:var(--blue)}
   .main{flex:1;min-width:0;padding:24px;display:flex;flex-direction:column;gap:18px;overflow:auto}
+  .page-title{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+  .machine-restart-box{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
   .page-title h1{font-size:26px;line-height:1.15;margin:0 0 4px;font-weight:700;letter-spacing:-.01em}
   .page-title p{margin:0;color:var(--secondary);font-size:12.5px}
   .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
@@ -221,10 +223,6 @@
         <button class="btn block" data-copy-address>
           <svg class="icon"><use href="#i-copy"/></svg>Copy server address
         </button>
-        <button class="btn block" id="machine-restart" title="Restart the Mac">
-          <svg class="icon"><use href="#i-restart"/></svg>Restart Mac
-        </button>
-        <div class="dim" id="machine-hint" style="display:none;font-size:11px;line-height:1.3"></div>
         <button class="btn block" id="disconnect">
           <svg class="icon"><use href="#i-logout"/></svg>Disconnect
         </button>
@@ -234,8 +232,16 @@
 
   <main class="main">
     <div class="page-title">
-      <h1 id="page-title">Dashboard</h1>
+      <div>
+        <h1 id="page-title">Dashboard</h1>
       <p id="page-sub">Server Manager · not connected</p>
+      </div>
+      <div class="machine-restart-box">
+        <button class="btn" id="machine-restart" title="Restart the Mac">
+          <svg class="icon"><use href="#i-restart"/></svg>Restart Mac
+        </button>
+        <div class="dim" id="machine-hint" style="display:none;font-size:11px"></div>
+      </div>
     </div>
 
     <section class="tab stack" id="tab-dashboard">
