@@ -343,6 +343,7 @@
           <div id="orca-live" style="margin-top:12px">
             <div id="orca-live-title" style="font-size:12.5px;font-weight:600;line-height:1.35">…</div>
             <div class="dim" id="orca-live-meta" style="font-size:11px;margin-top:2px">reading Orca…</div>
+            <div class="dim" id="orca-live-note" style="font-size:11px;margin-top:4px;display:none"></div>
             <div class="list" id="orca-live-list" style="max-height:186px"></div>
           </div>
           <p class="msg" style="margin:12px 0 0" id="orca-note">
@@ -821,11 +822,17 @@ async function smLoadOrca() {
   try {
     const d = await smGet("/api/orca/activity");
     const s = d.session;
+    const note = document.getElementById("orca-live-note");
     if (!d.available || !s) {
       document.getElementById("orca-live-title").textContent = "No session yet";
       document.getElementById("orca-live-meta").textContent = d.note || "Orca has not logged a session yet";
+      if (note) { note.style.display = "none"; note.textContent = ""; }
       list.innerHTML = '<div class="item dim">' + smEsc(d.note || "Nothing logged yet") + "</div>";
       return;
+    }
+    if (note) {
+      note.textContent = d.stale ? (d.note || "") : "";
+      note.style.display = note.textContent ? "block" : "none";
     }
     document.getElementById("orca-live-title").textContent = s.title || "(untitled session)";
     const meta = [s.agent, s.project, s.branch,
@@ -833,7 +840,7 @@ async function smLoadOrca() {
                   s.source === "live" ? "live" : null,
                   s.messages ? s.messages + " msgs" : null,
                   s.idle_seconds !== null && s.idle_seconds !== undefined
-                    ? "changed " + smAgo(s.idle_seconds) : null].filter(Boolean);
+                    ? "last activity " + smAgo(s.idle_seconds) : null].filter(Boolean);
     document.getElementById("orca-live-meta").textContent = meta.join(" · ");
     const kindLabel = { assistant: "reply", tool: "tool", user: "ask", state: "now" };
     list.innerHTML = (d.recent || []).map((m) => (
