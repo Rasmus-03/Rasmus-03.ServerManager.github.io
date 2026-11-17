@@ -311,6 +311,11 @@
             <div class="row"><span>Uptime</span><span id="orca-uptime">–</span></div>
             <div class="row"><span>Port</span><span id="orca-port">–</span></div>
           </div>
+          <div id="orca-live" style="margin-top:12px">
+            <div id="orca-live-title" style="font-size:12.5px;font-weight:600;line-height:1.35">…</div>
+            <div class="dim" id="orca-live-meta" style="font-size:11px;margin-top:2px">reading Orca…</div>
+            <div class="list" id="orca-live-list" style="max-height:186px"></div>
+          </div>
           <p class="msg" style="margin:12px 0 0" id="orca-note">
             Orca Web only listens on the Mac's own network; it is not reachable through the dashboard tunnel.
           </p>
@@ -492,6 +497,7 @@ function setTab(tab) {
   if (TITLES[tab][1]) $("page-sub").textContent = TITLES[tab][1];
   if (tab === "console") getLog();
   if (tab === "server") smLoadTab();
+  if (tab === "dashboard") smLoadOrca();
 }
 
 function pill(el, text, cls) { el.innerHTML = `<span class="pill ${cls}">${text}</span>`; }
@@ -540,7 +546,7 @@ $("connect-form").addEventListener("submit", async (e) => {
     $("password").value = "";
     showConnect(false);
     $("net-base").textContent = API;
-    getStatus(); getLog();
+    getStatus(); getLog(); smLoadOrca();
   } catch (err) {
     $("connect-msg").textContent = err.message || "Could not reach that URL.";
   } finally {
@@ -753,6 +759,45 @@ async function smLoadPlugins() {
     )).join("") || '<div class="item dim">No plugin jars</div>';
   } catch (e) {
     box.innerHTML = '<div class="item dim">' + smEsc(e.message) + "</div>";
+  }
+}
+
+function smAgo(sec) {
+  if (sec === null || sec === undefined) return "–";
+  if (sec < 60) return sec + "s ago";
+  if (sec < 3600) return Math.round(sec / 60) + " min ago";
+  if (sec < 172800) return Math.round(sec / 3600) + " h ago";
+  return Math.round(sec / 86400) + " d ago";
+}
+
+// What the newest Orca session is working on, straight from Orca's own index.
+async function smLoadOrca() {
+  const list = document.getElementById("orca-live-list");
+  if (!list) return;
+  try {
+    const d = await smGet("/api/orca/activity");
+    const s = d.session;
+    if (!d.available || !s) {
+      document.getElementById("orca-live-title").textContent = "No session yet";
+      document.getElementById("orca-live-meta").textContent = d.note || "Orca has not logged a session yet";
+      list.innerHTML = '<div class="item dim">' + smEsc(d.note || "Nothing logged yet") + "</div>";
+      return;
+    }
+    document.getElementById("orca-live-title").textContent = s.title || "(untitled session)";
+    const meta = [s.agent, s.project, s.branch,
+                  s.messages ? s.messages + " msgs" : null,
+                  s.idle_seconds !== null && s.idle_seconds !== undefined
+                    ? "changed " + smAgo(s.idle_seconds) : null].filter(Boolean);
+    document.getElementById("orca-live-meta").textContent = meta.join(" · ");
+    const kindLabel = { assistant: "reply", tool: "tool", user: "ask" };
+    list.innerHTML = (d.recent || []).map((m) => (
+      '<div class="item"><span class="dim" style="min-width:34px">' +
+      smEsc(kindLabel[m.kind] || m.kind) + "</span>" +
+      '<span class="grow" title="' + smEsc(m.text) + '">' + smEsc(m.text) + "</span>" +
+      '<span class="dim" style="white-space:nowrap">' + smEsc(smAgo(m.age_seconds)) + "</span></div>"
+    )).join("") || '<div class="item dim">No messages logged yet</div>';
+  } catch (e) {
+    list.innerHTML = '<div class="item dim">' + smEsc(e.message || "could not read Orca") + "</div>";
   }
 }
 
@@ -1091,9 +1136,10 @@ document.querySelectorAll("[data-copy]").forEach((btn) =>
 
 API = API_BASE;
 $("net-base").textContent = API;
-if (SESSION) { showConnect(false); getStatus(); getLog(); }
+if (SESSION) { showConnect(false); getStatus(); getLog(); smLoadOrca(); }
 else { showConnect(true); }
 setInterval(getStatus, 5000);
+setInterval(() => { if (!document.hidden && TAB === "dashboard" && SESSION) smLoadOrca(); }, 5000);
 setInterval(() => { if (!document.hidden && TAB === "console") getLog(); }, 4000);
 </script>
 </body>
