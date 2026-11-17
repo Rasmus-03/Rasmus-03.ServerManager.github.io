@@ -1042,6 +1042,9 @@ document.getElementById("rcon-enable").addEventListener("click", async () => {
   } catch (e) { smMsg("srv-msg", e.message, true); }
 });
 
+// What the last search was run against, for the "install anyway" question.
+let modMeta = { version: "", loader: "" };
+
 async function smSearchMods() {
   const box = document.getElementById("mod-results");
   const msg = document.getElementById("mod-msg");
@@ -1050,6 +1053,7 @@ async function smSearchMods() {
   box.innerHTML = '<div class="item dim">searching…</div>';
   try {
     const d = await smGet("/api/mods/search?q=" + encodeURIComponent(q));
+    modMeta = { version: d.version || "", loader: d.loader || "" };
     const groups = (d.groups && d.groups.length) ? d.groups : [{ title: "", hint: "", items: d.results }];
     box.innerHTML = groups.map((g) => (g.title
       ? '<div class="item dim side-head"><span class="grow"><strong>' + smEsc(g.title) + "</strong>" +
@@ -1063,9 +1067,10 @@ async function smSearchMods() {
         : (m.available === true && m.build ? ' <span class="pill blue">' + smEsc(m.build) + "</span>" : "")) +
       (m.description ? ' <span class="dim">— ' + smEsc(m.description) + "</span>" : "") + "</span>" +
       '<span class="dim">' + (m.downloads ? Math.round(m.downloads / 1000) + "k" : "") + "</span>" +
-      '<button class="btn small"' + (m.available === false ? " disabled" : "") +
+      '<button class="btn small"' + (m.available === false ? ' data-mod-untagged="1"' : "") +
       ' data-mod-install="' + smEsc(m.id) + '" data-mod-source="' +
-      smEsc(m.source || "modrinth") + '">Install</button></div>'
+      smEsc(m.source || "modrinth") + '">' +
+      (m.available === false ? "Install anyway" : "Install") + "</button></div>"
     )).join("")).join("") || '<div class="item dim">No results</div>';
     const cf = d.curseforge || {};
     msg.textContent = (!d.supported
@@ -1113,11 +1118,18 @@ document.getElementById("mod-results").addEventListener("click", async (ev) => {
   const btn = ev.target.closest("[data-mod-install]");
   if (!btn) return;
   const msg = document.getElementById("mod-msg");
+  // A project with no matching build is not hidden: it is offered with the
+  // price named, and only an explicit yes downloads it.
+  const untagged = btn.dataset.modUntagged === "1";
+  if (untagged && !confirm("No build of this project is tagged for Minecraft " +
+      (modMeta.version || "this server") + ".\n\nInstall its newest " +
+      (modMeta.loader || "") + " build anyway? The server may refuse to load it.")) return;
   btn.disabled = true;
   msg.textContent = "installing…";
   try {
     const d = await smPost("/api/mods/install", {
-      project: btn.dataset.modInstall, source: btn.dataset.modSource || "modrinth" });
+      project: btn.dataset.modInstall, source: btn.dataset.modSource || "modrinth",
+      allow_untagged: untagged });
     msg.textContent = d.skipped
       ? d.installed + " is already in " + d.folder + "/"
       : "installed " + d.installed + " (" + (d.size_kb || 0) + " kB)" +
