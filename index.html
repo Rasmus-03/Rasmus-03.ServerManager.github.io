@@ -560,6 +560,7 @@ async function getStatus() {
     $("orca-port").textContent = `:${d.orca.port}`;
 
     $("net-local").textContent = `127.0.0.1:${mc.port}`;
+    $("net-address").textContent = (d.playit || {}).address || "–";
     pill($("net-orca"), d.orca.web_up ? "Reachable (Mac only)" : "Offline",
          d.orca.web_up ? "up" : "down");
   } catch (e) {
@@ -876,9 +877,6 @@ async function smLoadAutoRestart() {
   try {
     const st = await smGet("/api/status");
     document.getElementById("autorestart").checked = !!(st.minecraft || {}).autorestart;
-    const pl = st.playit || {};
-    const join = document.getElementById("net-address");
-    if (join) join.textContent = pl.address || "–";
   } catch (e) {}
 }
 
