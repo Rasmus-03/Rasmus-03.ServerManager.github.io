@@ -1043,7 +1043,9 @@ async function smLoadRecommended() {
     const d = await smGet("/api/mods/recommended");
     if (!d.installable || !d.items.length) { box.innerHTML = ""; return; }
     box.innerHTML = '<div class="item dim">Recommended' + (d.kind === "mods" ? " " + d.loader : "") +
-      ' mods — one click, nothing for players to install</div>' +
+      ' mods — one click' +
+      (d.skipped ? " · " + d.skipped + " left out, no build for " + (d.version || "this version") : "") +
+      '</div>' +
       d.items.map((m) => (
         '<div class="item"><span class="grow">' + smEsc(m.slug) +
         ' <span class="dim">— ' + smEsc(m.why) + "</span></span>" +
