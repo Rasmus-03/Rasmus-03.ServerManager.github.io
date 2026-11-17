@@ -420,18 +420,6 @@
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-head"><svg class="icon"><use href="#i-network"/></svg><h2>Playit tunnel</h2></div>
-          <div class="rows">
-            <div class="row"><span>Agent</span><span id="playit-state">–</span></div>
-            <div class="row"><span>Address</span><span class="mono" id="playit-address">–</span></div>
-          </div>
-          <div class="buttons">
-            <button class="btn primary" id="playit-start">Start</button>
-            <button class="btn danger" id="playit-stop">Stop</button>
-            <span class="msg" id="playit-msg"></span>
-          </div>
-        </div>
       </div>
 
 <section class="tab hidden" id="tab-network">
@@ -439,18 +427,9 @@
         <div class="card-head"><svg class="icon"><use href="#i-network"/></svg><h2>Network</h2></div>
         <div class="rows">
           <div class="row"><span>Dashboard backend</span><span class="mono" id="net-base">–</span></div>
-          <div class="row"><span>Playit tunnel</span><span id="net-tunnel"><span class="pill idle">…</span></span></div>
+          <div class="row"><span>Join address</span><span class="mono" id="net-address">–</span></div>
           <div class="row"><span>Local address</span><span class="mono" id="net-local">–</span></div>
           <div class="row"><span>Orca Web</span><span id="net-orca"><span class="pill idle">…</span></span></div>
-        </div>
-        <div class="address">
-          <div>
-            <div class="addr-label">Direct playit endpoint</div>
-            <div class="addr-value">stardom-michaels.tun.ply.gg:28984</div>
-          </div>
-          <button class="btn" data-copy="stardom-michaels.tun.ply.gg:28984">
-            <svg class="icon"><use href="#i-copy"/></svg>Copy
-          </button>
         </div>
         <p class="msg" style="margin:12px 0 0">
           The Mac dials out to the tunnel, so no router port forwarding is involved.
@@ -577,7 +556,6 @@ async function getStatus() {
     $("orca-uptime").textContent = fmtUptime(d.orca.uptime);
     $("orca-port").textContent = `:${d.orca.port}`;
 
-    pill($("net-tunnel"), "Configured", "blue");
     $("net-local").textContent = `127.0.0.1:${mc.port}`;
     pill($("net-orca"), d.orca.web_up ? "Reachable (Mac only)" : "Offline",
          d.orca.web_up ? "up" : "down");
@@ -896,9 +874,8 @@ async function smLoadAutoRestart() {
     const st = await smGet("/api/status");
     document.getElementById("autorestart").checked = !!(st.minecraft || {}).autorestart;
     const pl = st.playit || {};
-    document.getElementById("playit-state").innerHTML = pl.running
-      ? '<span class="pill up">running</span>' : '<span class="pill down">stopped</span>';
-    document.getElementById("playit-address").textContent = pl.address || "–";
+    const join = document.getElementById("net-address");
+    if (join) join.textContent = pl.address || "–";
   } catch (e) {}
 }
 
@@ -945,23 +922,6 @@ document.getElementById("create-server").addEventListener("click", async () => {
       (d.registered_in_app ? "added to Server Manager" : "files only, add it in the app"));
     smLoadServers();
   } catch (e) { smMsg("new-msg", e.message, true); }
-});
-
-document.getElementById("playit-start").addEventListener("click", async () => {
-  smMsg("playit-msg", "starting…");
-  try {
-    const d = await smPost("/api/playit/start", {});
-    smMsg("playit-msg", d.running ? "agent running" : "agent did not stay up");
-  } catch (e) { smMsg("playit-msg", e.message, true); }
-  smLoadAutoRestart();
-});
-
-document.getElementById("playit-stop").addEventListener("click", async () => {
-  try {
-    await smPost("/api/playit/stop", {});
-    smMsg("playit-msg", "stopped");
-  } catch (e) { smMsg("playit-msg", e.message, true); }
-  smLoadAutoRestart();
 });
 
 document.querySelectorAll(".nav-item").forEach((btn) =>
