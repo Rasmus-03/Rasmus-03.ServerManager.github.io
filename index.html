@@ -221,6 +221,9 @@
         <button class="btn block" data-copy-address>
           <svg class="icon"><use href="#i-copy"/></svg>Copy server address
         </button>
+        <button class="btn block" id="machine-restart" title="Restart the Mac">
+          <svg class="icon"><use href="#i-restart"/></svg>Restart Mac
+        </button>
         <button class="btn block" id="disconnect">
           <svg class="icon"><use href="#i-logout"/></svg>Disconnect
         </button>
@@ -570,6 +573,13 @@ async function getStatus() {
     });
     pill($("net-orca"), d.orca.web_up ? "Reachable (Mac only)" : "Offline",
          d.orca.web_up ? "up" : "down");
+
+    const machine = d.machine || {};
+    const mbtn = $("machine-restart");
+    mbtn.disabled = !machine.can_restart || !machine.auto_login;
+    mbtn.title = !machine.auto_login
+      ? "Turn on automatic login first (System Settings > Users & Groups)"
+      : (!machine.can_restart ? "No passwordless shutdown rule installed yet" : "Restart the Mac");
   } catch (e) {
     if (String(e.message) !== "unauthorized") $("page-sub").textContent = "Server Manager · connection lost, retrying";
   }
@@ -818,6 +828,19 @@ document.getElementById("eula-toggle").addEventListener("click", async () => {
     await smPost("/api/eula", { accepted: !current.accepted });
     smLoadProperties();
   } catch (e) { smMsg("srv-msg", e.message, true); }
+});
+
+document.getElementById("machine-restart").addEventListener("click", async () => {
+  const btn = document.getElementById("machine-restart");
+  if (!confirm("Restart this Mac?\n\nThe server and both tunnels go down for about a minute, then come back on their own.")) return;
+  btn.disabled = true;
+  try {
+    await smPost("/api/machine/restart", { confirm: true });
+    btn.textContent = "Restarting…";
+  } catch (e) {
+    btn.disabled = false;
+    alert("Restart failed: " + e.message);
+  }
 });
 
 document.getElementById("rcon-enable").addEventListener("click", async () => {
