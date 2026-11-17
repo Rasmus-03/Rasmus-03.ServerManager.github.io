@@ -168,8 +168,12 @@
        both stay in this browser.</p>
     <label for="api">Dashboard URL</label>
     <input id="api" name="api" placeholder="https://your-tunnel.example" autocapitalize="off" spellcheck="false">
-    <label for="token">Access token</label>
-    <input id="token" name="token" type="password" placeholder="config.json token" autocomplete="current-password">
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" placeholder="you@example.com"
+           autocapitalize="off" spellcheck="false" autocomplete="username">
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" placeholder="Dashboard password"
+           autocomplete="current-password">
     <button class="btn primary" type="submit" id="connect-btn">Connect</button>
     <p class="msg err" id="connect-msg"></p>
   </form>
@@ -344,7 +348,7 @@ function showConnect(show, message) {
   if (show) {
     $("api").value = API;
     $("connect-msg").textContent = message || "";
-    setTimeout(() => ($("api").value ? $("token").focus() : $("api").focus()), 50);
+    setTimeout(() => ($("api").value ? $("email").focus() : $("api").focus()), 50);
   }
 }
 
@@ -375,14 +379,14 @@ $("connect-form").addEventListener("submit", async (e) => {
     const res = await fetch(base + "/api/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: $("token").value }),
+      body: JSON.stringify({ email: $("email").value, password: $("password").value }),
     });
     if (res.status === 429) throw new Error("Too many attempts — wait a minute.");
     if (!res.ok) throw new Error(res.status === 401 ? "Wrong token." : `Backend answered ${res.status}.`);
     const data = await res.json();
     API = base; SESSION = data.session || "";
     localStorage.setItem(LS_BASE, API); localStorage.setItem(LS_SESSION, SESSION);
-    $("token").value = "";
+    $("password").value = "";
     showConnect(false);
     $("net-base").textContent = API;
     getStatus(); getLog();
