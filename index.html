@@ -1020,9 +1020,14 @@ async function smSearchMods() {
       : "") + (g.items || []).map((m) => (
       '<div class="item"><span class="grow">' + smEsc(m.title) +
       (m.source === "curseforge" ? ' <span class="pill idle">CurseForge</span>' : "") +
+      (m.available === false
+        ? ' <span class="pill down">no ' + smEsc(m.type === "plugin" ? "paper" : (d.loader || "")) +
+          (d.version ? " " + smEsc(d.version) : "") + " build</span>"
+        : (m.available === true && m.build ? ' <span class="pill blue">' + smEsc(m.build) + "</span>" : "")) +
       (m.description ? ' <span class="dim">— ' + smEsc(m.description) + "</span>" : "") + "</span>" +
       '<span class="dim">' + (m.downloads ? Math.round(m.downloads / 1000) + "k" : "") + "</span>" +
-      '<button class="btn small" data-mod-install="' + smEsc(m.id) + '" data-mod-source="' +
+      '<button class="btn small"' + (m.available === false ? " disabled" : "") +
+      ' data-mod-install="' + smEsc(m.id) + '" data-mod-source="' +
       smEsc(m.source || "modrinth") + '">Install</button></div>'
     )).join("")).join("") || '<div class="item dim">No results</div>';
     const cf = d.curseforge || {};
