@@ -384,9 +384,11 @@
         <div class="card">
           <div class="card-head"><svg class="icon"><use href="#i-cube"/></svg><h2>Plugins</h2></div>
           <div class="mod-search">
-            <input class="input" id="mod-query" placeholder="Search Modrinth for plugins…" autocomplete="off" style="flex:1">
+            <input class="input" id="mod-query" placeholder="Search mods by name…" autocomplete="off" style="flex:1">
             <button class="btn" id="mod-search">Search</button>
+            <button class="btn" id="mod-open">Folder</button>
           </div>
+          <div class="list" id="mod-recommended"></div>
           <div class="list" id="mod-results"></div>
           <div class="list" id="plugins"><div class="item dim">…</div></div>
           <p class="msg" id="mod-msg"></p>
@@ -787,7 +789,8 @@ async function smUpdate(show) {
 }
 
 async function smLoadTab() {
-  await Promise.all([smLoadServers(), smLoadProperties(), smLoadPlugins(), smLoadBackups()]);
+  await Promise.all([smLoadServers(), smLoadProperties(), smLoadPlugins(),
+                      smLoadBackups(), smLoadRecommended()]);
   smUpdate(false);
   smLoadAutoRestart();
   smLoadVersions();
@@ -912,13 +915,36 @@ async function smSearchMods() {
       '<span class="dim">' + (m.downloads ? Math.round(m.downloads / 1000) + "k" : "") + "</span>" +
       '<button class="btn small" data-mod-install="' + smEsc(m.id) + '">Install</button></div>'
     )).join("") || '<div class="item dim">No results</div>';
-    msg.textContent = d.version
-      ? "Modrinth plugins for Minecraft " + d.version
-      : "Server version unknown, showing every plugin loader";
+    msg.textContent = !d.supported
+      ? (d.note || "Server does not support mods.")
+      : "Installs into " + d.folder + "/ — Minecraft " + (d.version || "version unknown");
   } catch (e) {
     box.innerHTML = '<div class="item dim">' + smEsc(e.message) + "</div>";
   }
 }
+
+async function smLoadRecommended() {
+  const box = document.getElementById("mod-recommended");
+  try {
+    const d = await smGet("/api/mods/recommended");
+    if (!d.installable || !d.items.length) { box.innerHTML = ""; return; }
+    box.innerHTML = '<div class="item dim">Recommended' + (d.kind === "mods" ? " " + d.loader : "") +
+      ' mods — one click, nothing for players to install</div>' +
+      d.items.map((m) => (
+        '<div class="item"><span class="grow">' + smEsc(m.slug) +
+        ' <span class="dim">— ' + smEsc(m.why) + "</span></span>" +
+        '<button class="btn small" data-mod-install="' + smEsc(m.slug) + '">Install</button></div>'
+      )).join("");
+  } catch (e) { box.innerHTML = ""; }
+}
+
+document.getElementById("mod-open").addEventListener("click", async () => {
+  const msg = document.getElementById("mod-msg");
+  try {
+    const d = await smPost("/api/mods/open", {});
+    msg.textContent = "opened " + d.opened;
+  } catch (e) { msg.textContent = e.message; }
+});
 
 document.getElementById("mod-search").addEventListener("click", smSearchMods);
 document.getElementById("mod-query").addEventListener("keydown", (ev) => {
@@ -932,7 +958,10 @@ document.getElementById("mod-results").addEventListener("click", async (ev) => {
   msg.textContent = "installing…";
   try {
     const d = await smPost("/api/mods/install", { project: btn.dataset.modInstall });
-    msg.textContent = "installed " + d.installed + " (" + d.size_kb + " kB) — restart the server to load it";
+    msg.textContent = d.skipped
+      ? d.installed + " is already in " + d.folder + "/"
+      : "installed " + d.installed + " (" + (d.size_kb || 0) + " kB)" +
+        (d.note ? " — " + d.note : "") + " — restart the server to load it";
     await smLoadPlugins();
   } catch (e) {
     msg.textContent = e.message;
