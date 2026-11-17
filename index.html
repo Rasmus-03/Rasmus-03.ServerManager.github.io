@@ -429,6 +429,12 @@
             <button class="btn" id="mod-search">Search</button>
             <button class="btn" id="mod-open">Folder</button>
           </div>
+          <div class="mod-search">
+            <input class="input" id="jar-url" placeholder="https://…/MyPlugin.jar" autocomplete="off" style="flex:1">
+            <button class="btn" id="jar-from-url">From URL</button>
+            <input type="file" id="jar-file" accept=".jar" hidden>
+            <button class="btn" id="jar-pick">Upload jar</button>
+          </div>
           <div class="list" id="mod-recommended"></div>
           <div class="list" id="mod-results"></div>
           <div class="list" id="plugins"><div class="item dim">…</div></div>
@@ -782,6 +788,21 @@ function smMsg(id, text, isErr) {
 
 async function smGet(path) {
   const r = await smFetch(path);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || d.ok === false) throw new Error(d.error || "failed (" + r.status + ")");
+  return d;
+}
+
+// A jar from the user's disk: raw bytes, file name in a header, so no multipart
+// parsing on the Mac and the same error shape as smPost.
+async function smUpload(file) {
+  const opts = {
+    method: "POST",
+    headers: { ...TUNNEL, "X-Dash": "1", "X-Filename": encodeURIComponent(file.name),
+               "Content-Type": "application/octet-stream" },
+    body: await file.arrayBuffer(),
+  };
+  const r = await smFetch("/api/mods/upload", opts);
   const d = await r.json().catch(() => ({}));
   if (!r.ok || d.ok === false) throw new Error(d.error || "failed (" + r.status + ")");
   return d;
@@ -1145,6 +1166,49 @@ document.getElementById("mod-open").addEventListener("click", async () => {
     const d = await smPost("/api/mods/open", {});
     msg.textContent = "opened " + d.opened;
   } catch (e) { msg.textContent = e.message; }
+});
+
+// A plugin whose author does not publish on Modrinth: fetch the jar they offer,
+// or upload the one already downloaded. Neither can be checked against this
+// Minecraft version, so both say where the file came from instead.
+document.getElementById("jar-from-url").addEventListener("click", async () => {
+  const msg = document.getElementById("mod-msg");
+  const url = document.getElementById("jar-url").value.trim();
+  if (!url) return;
+  const cut = url.split("?")[0].split("/").pop() || url;
+  if (!confirm("Install " + cut + " from that address?\n\nOnly https jars are accepted, " +
+      "and nothing checks it against Minecraft " + (modMeta.version || "this server") + " or the loader.")) return;
+  msg.textContent = "downloading…";
+  try {
+    const d = await smPost("/api/mods/install_url", { url: url });
+    msg.textContent = d.skipped
+      ? d.installed + " is already in " + d.folder + "/"
+      : "installed " + d.installed + " (" + (d.size_kb || 0) + " kB) — " + d.note +
+        " — restart the server to load it";
+    await smLoadPlugins();
+  } catch (e) { msg.textContent = e.message; }
+});
+
+document.getElementById("jar-pick").addEventListener("click", () => {
+  document.getElementById("jar-file").click();
+});
+
+document.getElementById("jar-file").addEventListener("change", async () => {
+  const input = document.getElementById("jar-file");
+  const msg = document.getElementById("mod-msg");
+  const file = input.files && input.files[0];
+  if (!file) return;
+  try {
+    if (!/\.jar$/i.test(file.name)) throw new Error("only .jar files: " + file.name);
+    msg.textContent = "uploading " + file.name + "…";
+    const d = await smUpload(file);
+    msg.textContent = d.skipped
+      ? d.installed + " is already in " + d.folder + "/"
+      : "installed " + d.installed + " (" + (d.size_kb || 0) + " kB) — " + d.note +
+        " — restart the server to load it";
+    await smLoadPlugins();
+  } catch (e) { msg.textContent = e.message; }
+  finally { input.value = ""; }
 });
 
 document.getElementById("mod-search").addEventListener("click", smSearchMods);
