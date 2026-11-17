@@ -435,6 +435,7 @@
             <span class="msg" id="backup-msg"></span>
           </div>
           <div class="list" id="backups"><div class="item dim">…</div></div>
+          <p class="msg" id="backup-note" style="margin:10px 0 0"></p>
         </div>
 
         <div class="card">
@@ -842,12 +843,27 @@ async function smLoadBackups() {
   const box = document.getElementById("backups");
   try {
     const d = await smGet("/api/backups");
-    box.innerHTML = d.backups.map((b) => (
-      '<div class="item"><span class="grow">' + smEsc(b.name) + "</span>" +
-      '<span class="dim">' + b.size_mb + " MB · " + smEsc(b.created) + "</span>" +
-      '<button class="btn small" data-restore="' + smEsc(b.name) + '">Restore</button>' +
-      '<button class="btn small danger" data-backup-delete="' + smEsc(b.name) + '">Delete</button></div>'
-    )).join("") || '<div class="item dim">No backups yet</div>';
+    box.innerHTML = d.backups.map((b) => {
+      const copies = b.copies || {};
+      const copy = copies.cloud ? '<span class="pill up" title="copy in ' + smEsc((d.cloud || {}).dir || "") + '">off-site</span>'
+        : copies.internal ? '<span class="pill idle" title="only on this Mac (internal disk)">Mac only</span>'
+        : '<span class="pill down" title="no copy outside the server folder">no copy</span>';
+      const check = b.verified
+        ? '<span class="pill up" title="read back and unpacked ' + smEsc(b.verified_at || "") +
+          (b.files ? " · " + b.files + " files" : "") + '">verified</span>'
+        : '<span class="pill down" title="' + smEsc(b.problem || "not checked yet") + '">unverified</span>';
+      return '<div class="item"><span class="grow">' + smEsc(b.name) + "</span>" +
+        '<span class="dim">' + b.size_mb + " MB · " + smEsc(b.created) + "</span>" + check + copy +
+        '<button class="btn small" data-restore="' + smEsc(b.name) + '">Restore</button>' +
+        '<button class="btn small danger" data-backup-delete="' + smEsc(b.name) + '">Delete</button></div>';
+    }).join("") || '<div class="item dim">No backups yet</div>';
+    const cloud = d.cloud || {};
+    const note = document.getElementById("backup-note");
+    if (note) {
+      note.textContent = cloud.available
+        ? "Each archive is read back and unpacked right after it is made; a copy also goes off the Mac to " + cloud.dir
+        : "No off-machine copy: " + (cloud.dir || "the cloud folder") + " is missing or read-only";
+    }
   } catch (e) {
     box.innerHTML = '<div class="item dim">' + smEsc(e.message) + "</div>";
   }
@@ -1071,7 +1087,11 @@ document.getElementById("backup-create").addEventListener("click", async () => {
   smMsg("backup-msg", "creating…");
   try {
     const d = await smPost("/api/backups/create", {});
-    smMsg("backup-msg", d.name + " (" + d.size_mb + " MB)");
+    const check = d.verification || {};
+    smMsg("backup-msg", d.name + " (" + d.size_mb + " MB) · " +
+      (check.ok ? "verified, " + check.files + " files in " + check.seconds + "s"
+                : "VERIFICATION FAILED: " + (check.error || "unknown")) +
+      " · " + ((d.cloud || {}).ok ? "copied off the Mac" : "no off-site copy"));
     smLoadBackups();
   } catch (e) { smMsg("backup-msg", e.message, true); }
 });
