@@ -316,6 +316,10 @@
             <input class="input" id="ram" type="number" min="512" max="65536" step="512" value="4096">
             <button class="btn small" id="save-ram">Save</button>
           </div>
+          <div class="field">
+            <label class="dim"><input id="autorestart" type="checkbox"> Auto-restart</label>
+            <span class="dim">start it again if the process dies</span>
+          </div>
           <div class="buttons">
             <button class="btn primary" id="srv-start"><svg class="icon"><use href="#i-play"/></svg>Start</button>
             <button class="btn" id="srv-restart"><svg class="icon"><use href="#i-restart"/></svg>Restart</button>
@@ -384,6 +388,51 @@
         </div>
       </div>
     </section>
+
+      <div class="grid">
+        <div class="card">
+          <div class="card-head"><svg class="icon"><use href="#i-server"/></svg><h2>New server</h2></div>
+          <div class="field">
+            <label class="dim" for="new-kind">Software</label>
+            <select class="input" id="new-kind">
+              <option value="paper">Paper</option><option value="vanilla">Vanilla</option>
+            </select>
+            <label class="dim" for="new-version">Version</label>
+            <select class="input" id="new-version"><option>loading…</option></select>
+          </div>
+          <div class="field"><label class="dim" for="new-name">Name</label>
+            <input class="input wide" id="new-name" placeholder="My server"></div>
+          <div class="field"><label class="dim" for="new-path">Folder</label>
+            <input class="input wide" id="new-path" placeholder="/Volumes/BlackBox/new-server"></div>
+          <div class="field">
+            <label class="dim" for="new-port">Port</label>
+            <input class="input" id="new-port" type="number" value="25565" min="1024" max="65535">
+            <label class="dim" for="new-ram">RAM</label>
+            <input class="input" id="new-ram" type="number" value="4096" step="512">
+          </div>
+          <div class="field">
+            <label class="dim"><input id="new-eula" type="checkbox" checked> Accept EULA</label>
+            <label class="dim"><input id="new-start" type="checkbox"> Start after create</label>
+          </div>
+          <div class="buttons">
+            <button class="btn primary" id="create-server">Create server</button>
+            <span class="msg" id="new-msg"></span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><svg class="icon"><use href="#i-network"/></svg><h2>Playit tunnel</h2></div>
+          <div class="rows">
+            <div class="row"><span>Agent</span><span id="playit-state">–</span></div>
+            <div class="row"><span>Address</span><span class="mono" id="playit-address">–</span></div>
+          </div>
+          <div class="buttons">
+            <button class="btn primary" id="playit-start">Start</button>
+            <button class="btn danger" id="playit-stop">Stop</button>
+            <span class="msg" id="playit-msg"></span>
+          </div>
+        </div>
+      </div>
 
 <section class="tab hidden" id="tab-network">
       <div class="card">
@@ -712,6 +761,8 @@ async function smUpdate(show) {
 async function smLoadTab() {
   await Promise.all([smLoadServers(), smLoadProperties(), smLoadPlugins(), smLoadBackups()]);
   smUpdate(false);
+  smLoadAutoRestart();
+  smLoadVersions();
 }
 
 async function smAction(action) {
@@ -838,6 +889,80 @@ document.getElementById("update-download").addEventListener("click", async () =>
     smMsg("srv-msg", "downloaded " + d.downloaded + " (" + d.size_mb + " MB)");
     smUpdate(false);
   } catch (e) { smMsg("srv-msg", e.message, true); btn.disabled = false; }
+});
+
+/* ── auto-restart, server creation, playit ──────────────────────────────── */
+async function smLoadAutoRestart() {
+  try {
+    const st = await smGet("/api/status");
+    document.getElementById("autorestart").checked = !!(st.minecraft || {}).autorestart;
+    const pl = st.playit || {};
+    document.getElementById("playit-state").innerHTML = pl.running
+      ? '<span class="pill up">running</span>' : '<span class="pill down">stopped</span>';
+    document.getElementById("playit-address").textContent = pl.address || "–";
+  } catch (e) {}
+}
+
+document.getElementById("autorestart").addEventListener("change", async (ev) => {
+  try {
+    const d = await smPost("/api/autorestart", { enabled: ev.target.checked });
+    smMsg("srv-msg", "auto-restart " + (d.enabled ? "on" : "off"));
+  } catch (e) {
+    smMsg("srv-msg", e.message, true);
+    ev.target.checked = !ev.target.checked;
+  }
+});
+
+async function smLoadVersions() {
+  const kind = document.getElementById("new-kind").value;
+  const sel = document.getElementById("new-version");
+  sel.innerHTML = '<option value="">loading…</option>';
+  try {
+    const d = await smGet("/api/versions?kind=" + encodeURIComponent(kind));
+    sel.innerHTML = d.versions.map((v) =>
+      '<option value="' + smEsc(v) + '">' + smEsc(v) + "</option>").join("");
+  } catch (e) {
+    sel.innerHTML = '<option value="">' + smEsc(e.message) + "</option>";
+  }
+}
+
+document.getElementById("new-kind").addEventListener("change", smLoadVersions);
+
+document.getElementById("create-server").addEventListener("click", async () => {
+  const payload = {
+    kind: document.getElementById("new-kind").value,
+    version: document.getElementById("new-version").value,
+    name: document.getElementById("new-name").value,
+    path: document.getElementById("new-path").value,
+    port: Number(document.getElementById("new-port").value) || 25565,
+    ram_mb: Number(document.getElementById("new-ram").value) || 4096,
+    eula: document.getElementById("new-eula").checked,
+    start: document.getElementById("new-start").checked,
+  };
+  smMsg("new-msg", "creating — this downloads the jar…");
+  try {
+    const d = await smPost("/api/servers/create", payload);
+    smMsg("new-msg", d.jar + " · " + d.jar_mb + " MB · " +
+      (d.registered_in_app ? "added to Server Manager" : "files only, add it in the app"));
+    smLoadServers();
+  } catch (e) { smMsg("new-msg", e.message, true); }
+});
+
+document.getElementById("playit-start").addEventListener("click", async () => {
+  smMsg("playit-msg", "starting…");
+  try {
+    const d = await smPost("/api/playit/start", {});
+    smMsg("playit-msg", d.running ? "agent running" : "agent did not stay up");
+  } catch (e) { smMsg("playit-msg", e.message, true); }
+  smLoadAutoRestart();
+});
+
+document.getElementById("playit-stop").addEventListener("click", async () => {
+  try {
+    await smPost("/api/playit/stop", {});
+    smMsg("playit-msg", "stopped");
+  } catch (e) { smMsg("playit-msg", e.message, true); }
+  smLoadAutoRestart();
 });
 
 document.querySelectorAll(".nav-item").forEach((btn) =>
