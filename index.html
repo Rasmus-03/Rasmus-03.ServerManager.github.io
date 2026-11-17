@@ -462,7 +462,7 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
-const API_BASE = "https://zinc-diagnostic-rendered-tears.trycloudflare.com";
+const API_BASE = "https://conviction-builds-commercial-curve.trycloudflare.com";
 const LS_SESSION = "sm.session";
 let API = API_BASE;
 let SESSION = localStorage.getItem(LS_SESSION) || "";
@@ -505,7 +505,7 @@ function disconnect(message) {
 async function api(path, opts) {
   const res = await fetch(API.replace(/\/+$/, "") + path, {
     ...(opts || {}),
-    headers: { ...((opts && opts.headers) || {}), Authorization: "Bearer " + SESSION },
+    headers: { ...((opts && opts.headers) || {}), Authorization: "Bearer " + SESSION, "ngrok-skip-browser-warning": "1" },
   });
   if (res.status === 401) { disconnect("Session expired — connect again."); throw new Error("unauthorized"); }
   return res;
@@ -520,7 +520,7 @@ $("connect-form").addEventListener("submit", async (e) => {
   try {
     const res = await fetch(base + "/api/session", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "1" },
       body: JSON.stringify({ email: $("email").value, password: $("password").value }),
     });
     if (res.status === 429) throw new Error("Too many attempts — wait a minute.");
@@ -607,7 +607,7 @@ async function act(action, btn) {
   try {
     const r = await api(`/api/minecraft/${action}`, {
       method: "POST",
-      headers: { "X-Dash": "1", "Content-Type": "application/json" },
+      headers: { "X-Dash": "1", "Content-Type": "application/json", "ngrok-skip-browser-warning": "1" },
       body: "{}",
     });
     const d = await r.json().catch(() => ({}));
@@ -650,7 +650,7 @@ async function smGet(path) {
 async function smPost(path, payload) {
   const opts = {
     method: "POST",
-    headers: { "X-Dash": "1", "Content-Type": "application/json" },
+    headers: { "X-Dash": "1", "Content-Type": "application/json", "ngrok-skip-browser-warning": "1" },
     body: JSON.stringify(payload || {}),
   };
   const r = await smFetch(path, opts);
