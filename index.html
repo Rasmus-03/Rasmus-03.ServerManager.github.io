@@ -1099,7 +1099,8 @@ async function smSearchMods() {
       (m.source === "curseforge" ? ' <span class="pill idle">CurseForge</span>' : "") +
       (m.available === false
         ? ' <span class="pill down">no ' + smEsc(m.type === "plugin" ? "paper" : (d.loader || "")) +
-          (d.version ? " " + smEsc(d.version) : "") + " build</span>"
+          (d.version ? " " + smEsc(d.version) : "") + " build" +
+          (m.newest ? " · newest " + smEsc(m.newest) : "") + "</span>"
         : (m.available === true && m.build ? ' <span class="pill blue">' + smEsc(m.build) + "</span>" : "")) +
       (m.description ? ' <span class="dim">— ' + smEsc(m.description) + "</span>" : "") + "</span>" +
       '<span class="dim">' + (m.downloads ? Math.round(m.downloads / 1000) + "k" : "") + "</span>" +
