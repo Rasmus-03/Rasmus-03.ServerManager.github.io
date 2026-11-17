@@ -147,6 +147,8 @@
          color:var(--text);font:inherit;font-size:12.5px;min-width:0}
   .input.wide{flex:1;min-width:160px}
   .list{display:flex;flex-direction:column;gap:6px;margin-top:10px;max-height:240px;overflow:auto}
+  .side-head{align-items:center;font-size:11px;letter-spacing:.04em;text-transform:uppercase;padding-top:6px;border-top:1px solid var(--stroke)}
+  .side-head:first-child{padding-top:0;border-top:none}
   .item{display:flex;align-items:center;gap:8px;padding:7px 9px;background:var(--row-bg);
         border:1px solid var(--stroke);border-radius:7px;font-size:12px}
   .item .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1011,14 +1013,18 @@ async function smSearchMods() {
   box.innerHTML = '<div class="item dim">searching…</div>';
   try {
     const d = await smGet("/api/mods/search?q=" + encodeURIComponent(q));
-    box.innerHTML = d.results.map((m) => (
+    const groups = (d.groups && d.groups.length) ? d.groups : [{ title: "", hint: "", items: d.results }];
+    box.innerHTML = groups.map((g) => (g.title
+      ? '<div class="item dim side-head"><span class="grow"><strong>' + smEsc(g.title) + "</strong>" +
+        (g.hint ? ' — ' + smEsc(g.hint) : "") + "</span></div>"
+      : "") + (g.items || []).map((m) => (
       '<div class="item"><span class="grow">' + smEsc(m.title) +
       (m.source === "curseforge" ? ' <span class="pill idle">CurseForge</span>' : "") +
       (m.description ? ' <span class="dim">— ' + smEsc(m.description) + "</span>" : "") + "</span>" +
       '<span class="dim">' + (m.downloads ? Math.round(m.downloads / 1000) + "k" : "") + "</span>" +
       '<button class="btn small" data-mod-install="' + smEsc(m.id) + '" data-mod-source="' +
       smEsc(m.source || "modrinth") + '">Install</button></div>'
-    )).join("") || '<div class="item dim">No results</div>';
+    )).join("")).join("") || '<div class="item dim">No results</div>';
     const cf = d.curseforge || {};
     msg.textContent = (!d.supported
       ? (d.note || "Server does not support mods.")
