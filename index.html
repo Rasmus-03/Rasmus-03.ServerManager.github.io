@@ -860,9 +860,9 @@ async function smLoadBackups() {
     const cloud = d.cloud || {};
     const note = document.getElementById("backup-note");
     if (note) {
-      note.textContent = cloud.available
+      note.textContent = "One backup a day, the last 7 kept. " + (cloud.available
         ? "Each archive is read back and unpacked right after it is made; a copy also goes off the Mac to " + cloud.dir
-        : "No off-machine copy: " + (cloud.dir || "the cloud folder") + " is missing or read-only";
+        : "No off-machine copy: " + (cloud.dir || "the cloud folder") + " is missing or read-only");
     }
   } catch (e) {
     box.innerHTML = '<div class="item dim">' + smEsc(e.message) + "</div>";
