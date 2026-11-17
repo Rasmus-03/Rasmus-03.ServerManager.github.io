@@ -5,13 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Server Manager</title>
 <style>
-  /* Same tokens as the app / Mac dashboard: panelBlue, macOS dark cards. */
+  /* Design tokens mirror Server Manager's SwiftUI palette (ContentView.swift):
+     panelBlue, NSColor dark controlBackground cards, separator strokes. */
   :root{
-    --panel-blue:#0d5cb8;
-    --panel-bg:#1e1f22;
-    --card-bg:#26272b;
-    --row-bg:rgba(38,39,43,.7);
-    --stroke:rgba(255,255,255,.11);
+    --panel-blue:#0d5cb8;            /* Color.panelBlue */
+    --panel-bg:#1e1f22;              /* windowBackgroundColor (dark) */
+    --card-bg:#26272b;               /* controlBackgroundColor (dark) */
+    --row-bg:rgba(38,39,43,.7);      /* rowBackground */
+    --stroke:rgba(255,255,255,.11);   /* cardStroke */
     --text:#f2f2f7;
     --secondary:rgba(235,235,245,.6);
     --green:#30d158;
@@ -30,29 +31,35 @@
   .icon{width:15px;height:15px;flex:none;vertical-align:-2px}
   .app{display:flex;min-height:100vh}
 
-  .sidebar{width:250px;flex:none;background:var(--card-bg);border-right:1px solid var(--stroke);
-           padding:16px;display:flex;flex-direction:column;gap:12px}
+  /* ── sidebar ─────────────────────────────────────────── */
+  .sidebar{
+    width:250px;flex:none;background:var(--card-bg);border-right:1px solid var(--stroke);
+    padding:16px;display:flex;flex-direction:column;gap:12px
+  }
   .server-card{background:var(--row-bg);border:1px solid var(--stroke);border-radius:8px;padding:12px}
   .server-head{display:flex;align-items:center;gap:7px;margin-bottom:8px}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex:none}
   .dot.up{background:var(--green)}
   .server-head .state{font-size:11px;color:var(--secondary)}
-  .server-head .kind{margin-left:auto;font-size:11px;color:var(--blue)}
+  .server-head .kind{margin-left:auto;font-size:11px;color:var(--panel-blue);filter:brightness(1.6)}
   .server-name{font-size:14px;font-weight:600;margin-bottom:8px}
   .info-line{display:flex;gap:10px;justify-content:space-between;font-size:11px;padding:2px 0}
   .info-line > span:first-child{color:var(--secondary);flex:none}
-  .info-line > span:last-child{text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .info-line span:last-child{text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .nav{display:flex;flex-direction:column;gap:4px}
-  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border:0;border-radius:8px;
-            background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer;width:100%}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:9px 12px;border:0;border-radius:8px;
+    background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer;width:100%
+  }
   .nav-item:hover{background:rgba(255,255,255,.05)}
   .nav-item.active{background:var(--panel-blue);color:#fff}
   .sidebar-spacer{flex:1}
 
+  /* ── cards / panels ──────────────────────────────────── */
   .card{background:var(--card-bg);border:1px solid var(--stroke);border-radius:8px;padding:14px}
   .card-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
   .card-head h2{font-size:13px;font-weight:600;margin:0}
-  .card-head .icon{color:var(--blue)}
+  .card-head .icon{color:var(--panel-blue);filter:brightness(1.7)}
   .main{flex:1;min-width:0;padding:24px;display:flex;flex-direction:column;gap:18px;overflow:auto}
   .mod-search{display:flex;gap:8px;margin:0 0 10px}
   .page-title{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
@@ -65,14 +72,18 @@
   .stack{display:flex;flex-direction:column;gap:18px}
   .tab.hidden{display:none}
 
+  /* ── metric tiles ────────────────────────────────────── */
   .metrics{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
   .metric{background:var(--card-bg);border:1px solid var(--stroke);border-radius:8px;padding:14px}
   .metric .icon{margin-bottom:12px}
-  .metric .value{font-size:20px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .metric .value{font-size:20px;font-weight:600;line-height:1.2;
+                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .metric .label{font-size:11px;color:var(--secondary);margin-top:2px}
 
+  /* ── rows, pills, buttons ────────────────────────────── */
   .rows{display:flex;flex-direction:column}
   .row{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;padding:5px 0}
+  /* child combinators: a pill nested in the value span must keep its own tint */
   .row > span:first-child{color:var(--secondary)}
   .row > span:last-child{text-align:right}
   .pill{display:inline-block;font-size:11px;font-weight:600;padding:5px 9px;border-radius:8px}
@@ -80,7 +91,8 @@
   .pill.down{color:var(--red);background:rgba(255,69,58,.12)}
   .pill.idle{color:var(--secondary);background:rgba(235,235,245,.1)}
   .pill.blue{color:var(--blue);background:rgba(100,181,255,.12)}
-  .address{display:flex;align-items:center;gap:12px;padding:10px;background:var(--row-bg);border-radius:8px;margin-top:10px}
+  .address{display:flex;align-items:center;gap:12px;padding:10px;background:var(--row-bg);
+           border-radius:8px;margin-top:10px}
   .address .addr-label{font-size:11px;color:var(--secondary);margin-bottom:3px}
   .address .addr-value{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12px}
   .address .btn{margin-left:auto}
@@ -98,12 +110,17 @@
   .msg{font-size:11.5px;color:var(--secondary)}
   .msg.err{color:var(--red)}
   .quick-actions{display:flex;flex-direction:column;gap:8px}
+
+  /* ── log box (Color.black + monospaced, as LogBox) ───── */
   .logbox{background:#000;border-radius:8px;border:1px solid var(--stroke);padding:12px;
           max-height:min(60vh,520px);overflow:auto;margin:0;
           font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
           font-size:12px;line-height:1.55;color:#e8e8ed;white-space:pre-wrap}
+  .logbox::-webkit-scrollbar{width:10px}
+  .logbox::-webkit-scrollbar-thumb{background:#3a3a3c;border-radius:6px}
 
-  /* connect screen */
+  /* connect screen: the Pages copy has no cookie session, so it asks for the
+     email and password itself and keeps the bearer token in this browser. */
   .overlay{position:fixed;inset:0;background:rgba(15,16,18,.96);display:grid;place-items:center;z-index:10;padding:20px}
   .overlay.hidden{display:none}
   .connect{background:var(--card-bg);border:1px solid var(--stroke);border-radius:12px;
@@ -202,20 +219,26 @@
     <div class="server-card">
       <div class="server-head">
         <i class="dot" id="side-dot"></i>
-        <span class="state" id="side-state">waiting…</span>
+        <span class="state" id="side-state">loading…</span>
         <span class="kind">Minecraft</span>
       </div>
       <div class="server-name">BlackBox Minecraft</div>
       <div class="info-line"><span>Software</span><span id="side-software">–</span></div>
-      <div class="info-line"><span>Path</span><span class="mono" id="side-path">/Volumes/BlackBox/…</span></div>
+      <div class="info-line"><span>Path</span><span class="mono" id="side-path" title="/Volumes/BlackBox/minecraft-server">/Volumes/BlackBox/…</span></div>
       <div class="info-line"><span>Port</span><span id="side-port">–</span></div>
     </div>
 
     <nav class="nav">
-      <button class="nav-item active" data-tab="dashboard"><svg class="icon"><use href="#i-gauge"/></svg>Dashboard</button>
-      <button class="nav-item" data-tab="console"><svg class="icon"><use href="#i-terminal"/></svg>Console</button>
+      <button class="nav-item active" data-tab="dashboard">
+        <svg class="icon"><use href="#i-gauge"/></svg>Dashboard
+      </button>
+      <button class="nav-item" data-tab="console">
+        <svg class="icon"><use href="#i-terminal"/></svg>Console
+      </button>
             <button class="nav-item" data-tab="server"><svg class="icon"><use href="#i-server"/></svg>Server</button>
-<button class="nav-item" data-tab="network"><svg class="icon"><use href="#i-network"/></svg>Network</button>
+<button class="nav-item" data-tab="network">
+        <svg class="icon"><use href="#i-network"/></svg>Network
+      </button>
     </nav>
 
     <div class="sidebar-spacer"></div>
@@ -224,7 +247,7 @@
       <div class="card-head"><svg class="icon"><use href="#i-bolt"/></svg><h2>Quick Actions</h2></div>
       <div class="quick-actions">
         <button class="btn block" data-copy-address>
-          <svg class="icon"><use href="#i-copy"/></svg>Copy server address
+          <svg class="icon"><use href="#i-copy"/></svg>Copy address
         </button>
         <button class="btn block" id="disconnect">
           <svg class="icon"><use href="#i-logout"/></svg>Disconnect
@@ -237,7 +260,7 @@
     <div class="page-title">
       <div>
         <h1 id="page-title">Dashboard</h1>
-      <p id="page-sub">Server Manager · not connected</p>
+      <p id="page-sub">Server Manager · connecting…</p>
       </div>
       <div class="machine-restart-box">
         <div class="restart-row">
@@ -259,19 +282,23 @@
         <div class="metrics">
           <div class="metric">
             <svg class="icon" id="m-status-icon" style="color:var(--red)"><use href="#i-power"/></svg>
-            <div class="value" id="m-status">–</div><div class="label">Status</div>
+            <div class="value" id="m-status">Offline</div>
+            <div class="label">Status</div>
           </div>
           <div class="metric">
             <svg class="icon" style="color:var(--green)"><use href="#i-cube"/></svg>
-            <div class="value" id="m-players">–</div><div class="label">Players</div>
+            <div class="value" id="m-players">–</div>
+            <div class="label">Players</div>
           </div>
           <div class="metric">
             <svg class="icon" style="color:var(--orange)"><use href="#i-restart"/></svg>
-            <div class="value" id="m-uptime">–</div><div class="label">Uptime</div>
+            <div class="value" id="m-uptime">–</div>
+            <div class="label">Uptime</div>
           </div>
           <div class="metric">
             <svg class="icon" style="color:var(--blue)"><use href="#i-network"/></svg>
-            <div class="value" id="m-port">–</div><div class="label">Port</div>
+            <div class="value" id="m-port">–</div>
+            <div class="label">Port</div>
           </div>
         </div>
       </div>
@@ -326,7 +353,7 @@
     <section class="tab hidden" id="tab-console">
       <div class="card">
         <div class="card-head"><svg class="icon"><use href="#i-terminal"/></svg><h2>Console</h2></div>
-        <pre class="logbox" id="log">not connected</pre>
+        <pre class="logbox" id="log">loading…</pre>
       </div>
     </section>
 
@@ -473,6 +500,8 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
+// The Pages copy is served by GitHub, so it needs the tunnel address and its
+// own bearer session instead of the cookie the Mac's own page gets.
 const API_BASE = "https://worthy-friendly-eft.ngrok-free.app";
 const LS_SESSION = "sm.session";
 // ngrok's free plan answers browser-ish requests with a warning page; this
@@ -491,8 +520,10 @@ const TITLES = {
 
 function setTab(tab) {
   TAB = tab;
-  document.querySelectorAll(".nav-item").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
-  document.querySelectorAll(".tab").forEach((s) => s.classList.toggle("hidden", s.id !== "tab-" + tab));
+  document.querySelectorAll(".nav-item").forEach((b) =>
+    b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll(".tab").forEach((s) =>
+    s.classList.toggle("hidden", s.id !== "tab-" + tab));
   $("page-title").textContent = TITLES[tab][0];
   if (TITLES[tab][1]) $("page-sub").textContent = TITLES[tab][1];
   if (tab === "console") getLog();
@@ -500,8 +531,14 @@ function setTab(tab) {
   if (tab === "dashboard") smLoadOrca();
 }
 
-function pill(el, text, cls) { el.innerHTML = `<span class="pill ${cls}">${text}</span>`; }
-function fmtUptime(s) { return s ? s.replace(/-/g, "d ") : "–"; }
+function pill(el, text, cls) {
+  el.innerHTML = `<span class="pill ${cls}">${text}</span>`;
+}
+
+function fmtUptime(s) {
+  if (!s) return "–";
+  return s.replace(/-/g, "d ").replace(/:/g, ":");
+}
 
 function showConnect(show, message) {
   $("connect-screen").classList.toggle("hidden", !show);
@@ -529,11 +566,10 @@ async function api(path, opts) {
 $("connect-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const btn = $("connect-btn");
-  const base = API_BASE;
   $("connect-msg").textContent = "Connecting…";
   btn.disabled = true;
   try {
-    const res = await fetch(base + "/api/session", {
+    const res = await fetch(API + "/api/session", {
       method: "POST",
       headers: { ...TUNNEL, "Content-Type": "application/json" },
       body: JSON.stringify({ email: $("email").value, password: $("password").value }),
@@ -548,7 +584,7 @@ $("connect-form").addEventListener("submit", async (e) => {
     $("net-base").textContent = API;
     getStatus(); getLog(); smLoadOrca();
   } catch (err) {
-    $("connect-msg").textContent = err.message || "Could not reach that URL.";
+    $("connect-msg").textContent = err.message || "Could not reach the backend.";
   } finally {
     btn.disabled = false;
   }
@@ -586,7 +622,6 @@ async function getStatus() {
     $("page-sub").textContent = `Server Manager · ${d.host} · ${d.time}`;
     $("net-base").textContent = API;
 
-    
     pill($("orca-app"), d.orca.app_running ? "Running" : "Stopped", d.orca.app_running ? "up" : "down");
     pill($("orca-web"), d.orca.web_up ? "Reachable" : "Offline", d.orca.web_up ? "up" : "down");
     $("orca-uptime").textContent = fmtUptime(d.orca.uptime);
@@ -619,7 +654,9 @@ async function getStatus() {
       hint.textContent = "";
     }
   } catch (e) {
-    if (String(e.message) !== "unauthorized") $("page-sub").textContent = "Server Manager · connection lost, retrying";
+    if (String(e.message) !== "unauthorized") {
+      $("page-sub").textContent = "Server Manager · connection lost, retrying";
+    }
   }
 }
 
@@ -1128,13 +1165,16 @@ document.querySelectorAll("[data-action]").forEach((btn) =>
 document.querySelectorAll("[data-copy]").forEach((btn) =>
   btn.addEventListener("click", async () => {
     const original = btn.innerHTML;
-    try { if (!btn.dataset.copy) return;
-      await navigator.clipboard.writeText(btn.dataset.copy); btn.textContent = "Copied"; }
-    catch (e) { btn.textContent = "Copy failed"; }
+    try {
+      if (!btn.dataset.copy) return;
+      await navigator.clipboard.writeText(btn.dataset.copy);
+      btn.textContent = "Copied";
+    } catch (e) {
+      btn.textContent = "Copy failed";
+    }
     setTimeout(() => { btn.innerHTML = original; }, 1500);
   }));
 
-API = API_BASE;
 $("net-base").textContent = API;
 if (SESSION) { showConnect(false); getStatus(); getLog(); smLoadOrca(); }
 else { showConnect(true); }
