@@ -118,6 +118,21 @@
     .sidebar-spacer{display:none}
     .main{padding:16px}
   }
+
+  /* ── server control tab ─────────────────────────────── */
+  .field{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  .input{padding:6px 9px;border-radius:6px;border:1px solid var(--stroke);background:rgba(0,0,0,.25);
+         color:var(--text);font:inherit;font-size:12.5px;min-width:0}
+  .input.wide{flex:1;min-width:160px}
+  .list{display:flex;flex-direction:column;gap:6px;margin-top:10px;max-height:240px;overflow:auto}
+  .item{display:flex;align-items:center;gap:8px;padding:7px 9px;background:var(--row-bg);
+        border:1px solid var(--stroke);border-radius:7px;font-size:12px}
+  .item .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dim{color:var(--secondary)}
+  .btn.small{padding:4px 8px;font-size:11.5px}
+  .outbox{background:#000;border:1px solid var(--stroke);border-radius:8px;padding:10px;margin-top:10px;
+          font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12px;
+          white-space:pre-wrap;max-height:220px;overflow:auto;color:#e8e8ed}
 </style>
 </head>
 <body>
@@ -194,7 +209,8 @@
     <nav class="nav">
       <button class="nav-item active" data-tab="dashboard"><svg class="icon"><use href="#i-gauge"/></svg>Dashboard</button>
       <button class="nav-item" data-tab="console"><svg class="icon"><use href="#i-terminal"/></svg>Console</button>
-      <button class="nav-item" data-tab="network"><svg class="icon"><use href="#i-network"/></svg>Network</button>
+            <button class="nav-item" data-tab="server"><svg class="icon"><use href="#i-server"/></svg>Server</button>
+<button class="nav-item" data-tab="network"><svg class="icon"><use href="#i-network"/></svg>Network</button>
     </nav>
 
     <div class="sidebar-spacer"></div>
@@ -290,7 +306,86 @@
       </div>
     </section>
 
-    <section class="tab hidden" id="tab-network">
+        <section class="tab hidden" id="tab-server">
+      <div class="grid">
+        <div class="card">
+          <div class="card-head"><svg class="icon"><use href="#i-server"/></svg><h2>Servers</h2></div>
+          <div class="rows" id="srv-rows"><div class="row"><span>Loading</span><span>…</span></div></div>
+          <div class="field">
+            <label class="dim" for="ram">RAM (MB)</label>
+            <input class="input" id="ram" type="number" min="512" max="65536" step="512" value="4096">
+            <button class="btn small" id="save-ram">Save</button>
+          </div>
+          <div class="buttons">
+            <button class="btn primary" id="srv-start"><svg class="icon"><use href="#i-play"/></svg>Start</button>
+            <button class="btn" id="srv-restart"><svg class="icon"><use href="#i-restart"/></svg>Restart</button>
+            <button class="btn danger" id="srv-stop"><svg class="icon"><use href="#i-stop"/></svg>Stop</button>
+            <span class="msg" id="srv-msg"></span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><svg class="icon"><use href="#i-terminal"/></svg><h2>Console command</h2></div>
+          <form class="field" id="cmd-form">
+            <input class="input wide" id="cmd" placeholder="say hello" autocomplete="off">
+            <button class="btn primary small" type="submit">Send</button>
+          </form>
+          <button class="btn small" id="btn-players" style="margin-top:8px">List players</button>
+          <div class="outbox" id="cmd-out">RCON replies land here.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><svg class="icon"><use href="#i-gauge"/></svg><h2>server.properties</h2></div>
+        <div class="grid" id="props"><div class="dim">Loading…</div></div>
+        <div class="buttons">
+          <button class="btn primary" id="save-props">Save settings</button>
+          <span class="msg" id="props-msg"></span>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="card-head"><svg class="icon"><use href="#i-power"/></svg><h2>EULA &amp; RCON</h2></div>
+          <div class="rows">
+            <div class="row"><span>EULA accepted</span><span id="eula-state">–</span></div>
+            <div class="row"><span>RCON</span><span id="rcon-state">–</span></div>
+          </div>
+          <div class="buttons">
+            <button class="btn" id="eula-toggle">Toggle EULA</button>
+            <button class="btn" id="rcon-enable">Enable RCON</button>
+          </div>
+          <p class="msg" style="margin:10px 0 0">RCON must be on before console commands work; enabling it takes one restart.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><svg class="icon"><use href="#i-cube"/></svg><h2>Plugins</h2></div>
+          <div class="list" id="plugins"><div class="item dim">…</div></div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="card-head"><svg class="icon"><use href="#i-server"/></svg><h2>Backups</h2></div>
+          <div class="buttons">
+            <button class="btn primary" id="backup-create">Create backup</button>
+            <span class="msg" id="backup-msg"></span>
+          </div>
+          <div class="list" id="backups"><div class="item dim">…</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><svg class="icon"><use href="#i-restart"/></svg><h2>Paper update</h2></div>
+          <div class="rows" id="update-rows"><div class="row"><span>Check</span><span>–</span></div></div>
+          <div class="buttons">
+            <button class="btn" id="update-check">Check for updates</button>
+            <button class="btn primary" id="update-download" disabled>Download newest</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+<section class="tab hidden" id="tab-network">
       <div class="card">
         <div class="card-head"><svg class="icon"><use href="#i-network"/></svg><h2>Network</h2></div>
         <div class="rows">
@@ -327,6 +422,7 @@ let TAB = "dashboard";
 const TITLES = {
   dashboard: ["Dashboard", null],
   console: ["Console", "Live output from the Paper server"],
+  server: ["Server", "Commands, settings, plugins, backups and updates"],
   network: ["Network", "How this page reaches the Mac"],
 };
 
@@ -337,6 +433,7 @@ function setTab(tab) {
   $("page-title").textContent = TITLES[tab][0];
   if (TITLES[tab][1]) $("page-sub").textContent = TITLES[tab][1];
   if (tab === "console") getLog();
+  if (tab === "server") smLoadTab();
 }
 
 function pill(el, text, cls) { el.innerHTML = `<span class="pill ${cls}">${text}</span>`; }
@@ -404,7 +501,6 @@ async function getStatus() {
     const running = mc.launchd_state === "running" || mc.port_open;
     const players = mc.players ? `${mc.players.online} / ${mc.players.max}` : null;
     const version = mc.players ? mc.players.version : null;
-    const external = mc.managed_by === "server-manager";
 
     $("side-dot").className = "dot" + (running ? " up" : "");
     $("side-state").textContent = running ? "Online" : "Offline";
@@ -426,9 +522,7 @@ async function getStatus() {
     $("page-sub").textContent = `Server Manager · ${d.host} · ${d.time}`;
     $("net-base").textContent = API;
 
-    document.querySelectorAll("[data-action]").forEach((b) => { b.disabled = external; });
-    $("mc-msg").textContent = external ? "Controlled by Server Manager app" : "";
-
+    
     pill($("orca-app"), d.orca.app_running ? "Running" : "Stopped", d.orca.app_running ? "up" : "down");
     pill($("orca-web"), d.orca.web_up ? "Reachable" : "Offline", d.orca.web_up ? "up" : "down");
     $("orca-uptime").textContent = fmtUptime(d.orca.uptime);
@@ -484,6 +578,267 @@ async function act(action, btn) {
     setTimeout(getLog, 1200);
   }
 }
+
+/* ── server control tab ─────────────────────────────────────────────────── */
+const smEsc = (v) => String(v ?? "").replace(/[&<>"']/g,
+  (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const smFetch = (path, opts) => (typeof api === "function" ? api(path, opts) : fetch(path, opts));
+
+function smMsg(id, text, isErr) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = "msg" + (isErr ? " err" : "");
+  el.textContent = text || "";
+}
+
+async function smGet(path) {
+  const r = await smFetch(path);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || d.ok === false) throw new Error(d.error || "failed (" + r.status + ")");
+  return d;
+}
+
+async function smPost(path, payload) {
+  const opts = {
+    method: "POST",
+    headers: { "X-Dash": "1", "Content-Type": "application/json" },
+    body: JSON.stringify(payload || {}),
+  };
+  const r = await smFetch(path, opts);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || d.ok === false) throw new Error(d.error || "failed (" + r.status + ")");
+  return d;
+}
+
+const SM_PROPS = [
+  ["motd", "MOTD"], ["max-players", "Max players"], ["difficulty", "Difficulty"],
+  ["gamemode", "Gamemode"], ["pvp", "PvP"], ["online-mode", "Online mode"],
+  ["white-list", "Whitelist"], ["view-distance", "View distance"],
+  ["simulation-distance", "Simulation distance"], ["server-port", "Port"],
+];
+
+async function smLoadServers() {
+  try {
+    const d = await smGet("/api/servers");
+    const rows = document.getElementById("srv-rows");
+    rows.innerHTML = d.servers.map((s) => (
+      '<div class="row"><span>' + smEsc(s.name) + (s.id === d.selected ? " ·selected" : "") +
+      '</span><span class="mono">' + (s.jar ? smEsc(s.jar) : "–") +
+      (s.exists ? "" : ' <span class="pill down">missing</span>') + "</span></div>"
+    )).join("") || '<div class="row"><span>No server</span><span>–</span></div>';
+    document.title = document.title;
+  } catch (e) {
+    smMsg("srv-msg", e.message, true);
+  }
+  try {
+    const st = await smGet("/api/status");
+    const mc = st.minecraft || {};
+    if (mc.rcon) {
+      document.getElementById("rcon-state").innerHTML = mc.rcon.usable
+        ? '<span class="pill up">on · port ' + mc.rcon.port + "</span>"
+        : '<span class="pill idle">' + (mc.rcon.enabled ? "on, no password" : "off") + "</span>";
+    }
+    if (mc.ram_mb) document.getElementById("ram").value = mc.ram_mb;
+  } catch (e) {}
+}
+
+async function smLoadProperties() {
+  try {
+    const d = await smGet("/api/properties");
+    const box = document.getElementById("props");
+    box.innerHTML = SM_PROPS.map(([key, label]) => (
+      '<div class="row"><span>' + smEsc(label) + '</span>' +
+      '<input class="input" data-prop="' + smEsc(key) + '" value="' +
+      smEsc(d.properties[key] ?? "") + '"></div>'
+    )).join("");
+  } catch (e) {
+    document.getElementById("props").innerHTML = '<div class="msg err">' + smEsc(e.message) + "</div>";
+  }
+  try {
+    const eula = await smGet("/api/eula");
+    document.getElementById("eula-state").innerHTML = eula.accepted
+      ? '<span class="pill up">accepted</span>' : '<span class="pill down">not accepted</span>';
+  } catch (e) {}
+}
+
+async function smLoadPlugins() {
+  const box = document.getElementById("plugins");
+  try {
+    const d = await smGet("/api/plugins");
+    box.innerHTML = d.plugins.map((p) => (
+      '<div class="item"><span class="grow">' + smEsc(p.name) + "</span>" +
+      '<span class="dim">' + p.size_kb + " kB</span>" +
+      '<button class="btn small" data-plugin="' + smEsc(p.name) + '" data-enable="' +
+      (p.enabled ? "0" : "1") + '">' + (p.enabled ? "Disable" : "Enable") + "</button>" +
+      '<button class="btn small danger" data-plugin-delete="' + smEsc(p.name) + '">Delete</button></div>'
+    )).join("") || '<div class="item dim">No plugin jars</div>';
+  } catch (e) {
+    box.innerHTML = '<div class="item dim">' + smEsc(e.message) + "</div>";
+  }
+}
+
+async function smLoadBackups() {
+  const box = document.getElementById("backups");
+  try {
+    const d = await smGet("/api/backups");
+    box.innerHTML = d.backups.map((b) => (
+      '<div class="item"><span class="grow">' + smEsc(b.name) + "</span>" +
+      '<span class="dim">' + b.size_mb + " MB · " + smEsc(b.created) + "</span>" +
+      '<button class="btn small" data-restore="' + smEsc(b.name) + '">Restore</button>' +
+      '<button class="btn small danger" data-backup-delete="' + smEsc(b.name) + '">Delete</button></div>'
+    )).join("") || '<div class="item dim">No backups yet</div>';
+  } catch (e) {
+    box.innerHTML = '<div class="item dim">' + smEsc(e.message) + "</div>";
+  }
+}
+
+async function smUpdate(show) {
+  const rows = document.getElementById("update-rows");
+  const btn = document.getElementById("update-download");
+  try {
+    const d = await smGet("/api/update");
+    btn.disabled = !d.update_available;
+    rows.innerHTML =
+      '<div class="row"><span>Installed</span><span class="mono">' + smEsc(d.installed || "–") + "</span></div>" +
+      '<div class="row"><span>Version / build</span><span>' + smEsc(d.version || "?") + " / " + smEsc(d.build ?? "?") + "</span></div>" +
+      '<div class="row"><span>Newest build</span><span>' + smEsc(d.latest_build ?? "?") + "</span></div>" +
+      '<div class="row"><span>Update</span><span>' + (d.update_available
+        ? '<span class="pill blue">available</span>' : '<span class="pill idle">' + smEsc(d.note || "up to date") + "</span>") + "</span></div>";
+  } catch (e) {
+    if (show) rows.innerHTML = '<div class="row"><span>Check failed</span><span class="dim">' + smEsc(e.message) + "</span></div>";
+  }
+}
+
+async function smLoadTab() {
+  await Promise.all([smLoadServers(), smLoadProperties(), smLoadPlugins(), smLoadBackups()]);
+  smUpdate(false);
+}
+
+async function smAction(action) {
+  smMsg("srv-msg", action + "…");
+  try {
+    await smPost("/api/minecraft/" + action, {});
+    smMsg("srv-msg", action + " sent");
+  } catch (e) {
+    smMsg("srv-msg", e.message, true);
+  }
+  setTimeout(getStatus, 600);
+  setTimeout(smLoadServers, 1200);
+}
+
+document.getElementById("srv-start").addEventListener("click", () => smAction("start"));
+document.getElementById("srv-restart").addEventListener("click", () => smAction("restart"));
+document.getElementById("srv-stop").addEventListener("click", () => smAction("stop"));
+
+document.getElementById("save-ram").addEventListener("click", async () => {
+  try {
+    const ram = Number(document.getElementById("ram").value);
+    const d = await smPost("/api/settings", { ram_mb: ram });
+    smMsg("srv-msg", "RAM set to " + d.ram_mb + " MB");
+  } catch (e) { smMsg("srv-msg", e.message, true); }
+});
+
+document.getElementById("cmd-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const input = document.getElementById("cmd");
+  const out = document.getElementById("cmd-out");
+  const command = input.value.trim();
+  if (!command) return;
+  out.textContent = "> " + command + "\n…";
+  try {
+    const d = await smPost("/api/console", { command });
+    out.textContent = "> " + command + "\n" + (d.output || "(no reply)");
+    input.value = "";
+  } catch (e) {
+    out.textContent = "> " + command + "\n" + e.message;
+  }
+});
+
+document.getElementById("btn-players").addEventListener("click", async () => {
+  const out = document.getElementById("cmd-out");
+  try {
+    const d = await smGet("/api/players");
+    out.textContent = d.raw || ("online " + d.online + "/" + d.max + ": " + (d.names || []).join(", "));
+  } catch (e) { out.textContent = e.message; }
+});
+
+document.getElementById("save-props").addEventListener("click", async () => {
+  const updates = {};
+  document.querySelectorAll("#props [data-prop]").forEach((el) => {
+    updates[el.dataset.prop] = el.value;
+  });
+  try {
+    const d = await smPost("/api/properties", { updates });
+    smMsg("props-msg", "Saved " + d.changed.length + " setting(s); restart to apply");
+  } catch (e) { smMsg("props-msg", e.message, true); }
+});
+
+document.getElementById("eula-toggle").addEventListener("click", async () => {
+  try {
+    const current = await smGet("/api/eula");
+    await smPost("/api/eula", { accepted: !current.accepted });
+    smLoadProperties();
+  } catch (e) { smMsg("srv-msg", e.message, true); }
+});
+
+document.getElementById("rcon-enable").addEventListener("click", async () => {
+  try {
+    const d = await smPost("/api/rcon/enable", {});
+    smMsg("srv-msg", "RCON on, port " + d.port + " — restart the server");
+    smLoadServers();
+  } catch (e) { smMsg("srv-msg", e.message, true); }
+});
+
+document.getElementById("plugins").addEventListener("click", async (ev) => {
+  const toggle = ev.target.closest("[data-plugin]");
+  const remove = ev.target.closest("[data-plugin-delete]");
+  try {
+    if (toggle) {
+      await smPost("/api/plugins/toggle", {
+        name: toggle.dataset.plugin, enabled: toggle.dataset.enable === "1" });
+      smLoadPlugins();
+    } else if (remove) {
+      await smPost("/api/plugins/delete", { name: remove.dataset.pluginDelete });
+      smLoadPlugins();
+    }
+  } catch (e) { smMsg("srv-msg", e.message, true); }
+});
+
+document.getElementById("backup-create").addEventListener("click", async () => {
+  smMsg("backup-msg", "creating…");
+  try {
+    const d = await smPost("/api/backups/create", {});
+    smMsg("backup-msg", d.name + " (" + d.size_mb + " MB)");
+    smLoadBackups();
+  } catch (e) { smMsg("backup-msg", e.message, true); }
+});
+
+document.getElementById("backups").addEventListener("click", async (ev) => {
+  const restore = ev.target.closest("[data-restore]");
+  const remove = ev.target.closest("[data-backup-delete]");
+  try {
+    if (restore) {
+      if (!confirm("Restore " + restore.dataset.restore + " over the current world?")) return;
+      await smPost("/api/backups/restore", { name: restore.dataset.restore });
+      smMsg("backup-msg", "restored");
+    } else if (remove) {
+      await smPost("/api/backups/delete", { name: remove.dataset.backupDelete });
+    }
+    smLoadBackups();
+  } catch (e) { smMsg("backup-msg", e.message, true); }
+});
+
+document.getElementById("update-check").addEventListener("click", () => smUpdate(true));
+document.getElementById("update-download").addEventListener("click", async () => {
+  const btn = document.getElementById("update-download");
+  btn.disabled = true;
+  smMsg("srv-msg", "downloading…");
+  try {
+    const d = await smPost("/api/update", { download: true });
+    smMsg("srv-msg", "downloaded " + d.downloaded + " (" + d.size_mb + " MB)");
+    smUpdate(false);
+  } catch (e) { smMsg("srv-msg", e.message, true); btn.disabled = false; }
+});
 
 document.querySelectorAll(".nav-item").forEach((btn) =>
   btn.addEventListener("click", () => setTab(btn.dataset.tab)));
