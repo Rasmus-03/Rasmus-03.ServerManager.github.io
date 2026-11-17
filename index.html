@@ -1009,13 +1009,19 @@ async function smSearchMods() {
     const d = await smGet("/api/mods/search?q=" + encodeURIComponent(q));
     box.innerHTML = d.results.map((m) => (
       '<div class="item"><span class="grow">' + smEsc(m.title) +
+      (m.source === "curseforge" ? ' <span class="pill idle">CurseForge</span>' : "") +
       (m.description ? ' <span class="dim">— ' + smEsc(m.description) + "</span>" : "") + "</span>" +
       '<span class="dim">' + (m.downloads ? Math.round(m.downloads / 1000) + "k" : "") + "</span>" +
-      '<button class="btn small" data-mod-install="' + smEsc(m.id) + '">Install</button></div>'
+      '<button class="btn small" data-mod-install="' + smEsc(m.id) + '" data-mod-source="' +
+      smEsc(m.source || "modrinth") + '">Install</button></div>'
     )).join("") || '<div class="item dim">No results</div>';
-    msg.textContent = !d.supported
+    const cf = d.curseforge || {};
+    msg.textContent = (!d.supported
       ? (d.note || "Server does not support mods.")
-      : "Installs into " + d.folder + "/ — Minecraft " + (d.version || "version unknown");
+      : "Installs into " + d.folder + "/ — Minecraft " + (d.version || "version unknown")) +
+      (cf.configured
+        ? (cf.note ? " · CurseForge: " + cf.note : " · sources: Modrinth + CurseForge")
+        : " · CurseForge off: " + (cf.note || "no API key"));
   } catch (e) {
     box.innerHTML = '<div class="item dim">' + smEsc(e.message) + "</div>";
   }
@@ -1031,7 +1037,8 @@ async function smLoadRecommended() {
       d.items.map((m) => (
         '<div class="item"><span class="grow">' + smEsc(m.slug) +
         ' <span class="dim">— ' + smEsc(m.why) + "</span></span>" +
-        '<button class="btn small" data-mod-install="' + smEsc(m.slug) + '">Install</button></div>'
+        '<button class="btn small" data-mod-install="' + smEsc(m.slug) +
+        '" data-mod-source="modrinth">Install</button></div>'
       )).join("");
   } catch (e) { box.innerHTML = ""; }
 }
@@ -1055,7 +1062,8 @@ document.getElementById("mod-results").addEventListener("click", async (ev) => {
   btn.disabled = true;
   msg.textContent = "installing…";
   try {
-    const d = await smPost("/api/mods/install", { project: btn.dataset.modInstall });
+    const d = await smPost("/api/mods/install", {
+      project: btn.dataset.modInstall, source: btn.dataset.modSource || "modrinth" });
     msg.textContent = d.skipped
       ? d.installed + " is already in " + d.folder + "/"
       : "installed " + d.installed + " (" + (d.size_kb || 0) + " kB)" +
