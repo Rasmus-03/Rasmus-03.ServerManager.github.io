@@ -675,7 +675,6 @@ async function smLoadServers() {
       '</span><span class="mono">' + (s.jar ? smEsc(s.jar) : "–") +
       (s.exists ? "" : ' <span class="pill down">missing</span>') + "</span></div>"
     )).join("") || '<div class="row"><span>No server</span><span>–</span></div>';
-    document.title = document.title;
   } catch (e) {
     smMsg("srv-msg", e.message, true);
   }
