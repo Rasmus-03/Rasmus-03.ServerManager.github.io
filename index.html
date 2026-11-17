@@ -836,13 +836,14 @@ async function smLoadOrca() {
     }
     document.getElementById("orca-live-title").textContent = s.title || "(untitled session)";
     const meta = [s.agent, s.project, s.branch,
-                  s.state === "working" ? "working now" : null,
-                  s.source === "live" ? "live" : null,
+                  s.state === "working" ? "working now" : (s.state || null),
+                  d.live === false ? "not live" : (d.live ? "live" : null),
                   s.messages ? s.messages + " msgs" : null,
                   s.idle_seconds !== null && s.idle_seconds !== undefined
                     ? "last activity " + smAgo(s.idle_seconds) : null].filter(Boolean);
     document.getElementById("orca-live-meta").textContent = meta.join(" · ");
-    const kindLabel = { assistant: "reply", tool: "tool", user: "ask", state: "now" };
+    const kindLabel = { assistant: "reply", tool: "tool", user: "ask",
+                        state: s.state === "quiet" ? "quiet" : "now" };
     list.innerHTML = (d.recent || []).map((m) => (
       '<div class="item"><span class="dim" style="min-width:34px">' +
       smEsc(kindLabel[m.kind] || m.kind) + "</span>" +
