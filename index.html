@@ -164,10 +164,8 @@
 <div class="overlay" id="connect-screen">
   <form class="connect" id="connect-form">
     <h1>Connect to your Mac</h1>
-    <p>This page is hosted by GitHub. Enter the Mac's dashboard URL and your access token;
-       both stay in this browser.</p>
-    <label for="api">Dashboard URL</label>
-    <input id="api" name="api" placeholder="https://your-tunnel.example" autocapitalize="off" spellcheck="false">
+    <p>This page is hosted by GitHub. Sign in with the dashboard's email and password;
+       the session stays in this browser.</p>
     <label for="email">Email</label>
     <input id="email" name="email" type="email" placeholder="you@example.com"
            autocapitalize="off" spellcheck="false" autocomplete="username">
@@ -320,8 +318,9 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
-const LS_BASE = "sm.apiBase", LS_SESSION = "sm.session";
-let API = localStorage.getItem(LS_BASE) || "";
+const API_BASE = "https://zinc-diagnostic-rendered-tears.trycloudflare.com";
+const LS_SESSION = "sm.session";
+let API = API_BASE;
 let SESSION = localStorage.getItem(LS_SESSION) || "";
 let TAB = "dashboard";
 
@@ -346,15 +345,14 @@ function fmtUptime(s) { return s ? s.replace(/-/g, "d ") : "–"; }
 function showConnect(show, message) {
   $("connect-screen").classList.toggle("hidden", !show);
   if (show) {
-    $("api").value = API;
     $("connect-msg").textContent = message || "";
-    setTimeout(() => ($("api").value ? $("email").focus() : $("api").focus()), 50);
+    setTimeout(() => $("email").focus(), 50);
   }
 }
 
 function disconnect(message) {
-  API = ""; SESSION = "";
-  localStorage.removeItem(LS_BASE); localStorage.removeItem(LS_SESSION);
+  SESSION = "";
+  localStorage.removeItem(LS_SESSION);
   showConnect(true, message || "");
 }
 
@@ -370,9 +368,7 @@ async function api(path, opts) {
 $("connect-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const btn = $("connect-btn");
-  let base = $("api").value.trim();
-  if (!/^https?:\/\//i.test(base)) base = "https://" + base;
-  base = base.replace(/\/+$/, "");
+  const base = API_BASE;
   $("connect-msg").textContent = "Connecting…";
   btn.disabled = true;
   try {
@@ -382,10 +378,10 @@ $("connect-form").addEventListener("submit", async (e) => {
       body: JSON.stringify({ email: $("email").value, password: $("password").value }),
     });
     if (res.status === 429) throw new Error("Too many attempts — wait a minute.");
-    if (!res.ok) throw new Error(res.status === 401 ? "Wrong token." : `Backend answered ${res.status}.`);
+    if (!res.ok) throw new Error(res.status === 401 ? "Wrong email or password." : `Backend answered ${res.status}.`);
     const data = await res.json();
-    API = base; SESSION = data.session || "";
-    localStorage.setItem(LS_BASE, API); localStorage.setItem(LS_SESSION, SESSION);
+    SESSION = data.session || "";
+    localStorage.setItem(LS_SESSION, SESSION);
     $("password").value = "";
     showConnect(false);
     $("net-base").textContent = API;
@@ -503,7 +499,9 @@ document.querySelectorAll("[data-copy]").forEach((btn) =>
     setTimeout(() => { btn.innerHTML = original; }, 1500);
   }));
 
-if (API && SESSION) { showConnect(false); getStatus(); getLog(); }
+API = API_BASE;
+$("net-base").textContent = API;
+if (SESSION) { showConnect(false); getStatus(); getLog(); }
 else { showConnect(true); }
 setInterval(getStatus, 5000);
 setInterval(() => { if (!document.hidden && TAB === "console") getLog(); }, 4000);
