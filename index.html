@@ -228,6 +228,8 @@
       <div class="info-line"><span>Software</span><span id="side-software">–</span></div>
       <div class="info-line"><span>Path</span><span class="mono" id="side-path" title="/Volumes/BlackBox/minecraft-server">/Volumes/BlackBox/…</span></div>
       <div class="info-line"><span>Port</span><span id="side-port">–</span></div>
+      <div class="info-line"><span>Server disk</span><span id="side-disk">–</span></div>
+      <div class="info-line"><span>Mac disk</span><span id="side-disk-mac">–</span></div>
     </div>
 
     <nav class="nav">
@@ -659,6 +661,26 @@ async function getStatus() {
       hint.style.display = "none";
       hint.textContent = "";
     }
+
+    // Free space matters before it runs out: a full volume fails the world save
+    // and every backup, and an unplugged drive looks like a stopped server.
+    const drawDisk = (id, key) => {
+      const el = $(id);
+      const disk = (machine.disks || []).filter((x) => x.key === key)[0];
+      if (!el) return;
+      if (!disk) { el.textContent = "–"; el.title = ""; el.style.color = ""; return; }
+      if (!disk.mounted) {
+        el.textContent = "not mounted";
+        el.title = disk.path + (disk.error ? " · " + disk.error : "");
+        el.style.color = "var(--red)";
+        return;
+      }
+      el.textContent = disk.free_gb + " of " + disk.total_gb + " GB free";
+      el.title = (disk.low ? "Low space · " : "") + disk.mount + " · " + disk.used_percent + "% used";
+      el.style.color = disk.low ? "var(--red)" : "";
+    };
+    drawDisk("side-disk", "server");
+    drawDisk("side-disk-mac", "internal");
   } catch (e) {
     if (String(e.message) !== "unauthorized") {
       $("page-sub").textContent = "Server Manager · connection lost, retrying";
