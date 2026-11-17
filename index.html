@@ -54,6 +54,7 @@
   .card-head h2{font-size:13px;font-weight:600;margin:0}
   .card-head .icon{color:var(--blue)}
   .main{flex:1;min-width:0;padding:24px;display:flex;flex-direction:column;gap:18px;overflow:auto}
+  .mod-search{display:flex;gap:8px;margin:0 0 10px}
   .page-title{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
   .machine-restart-box{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
   .restart-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
@@ -382,7 +383,13 @@
 
         <div class="card">
           <div class="card-head"><svg class="icon"><use href="#i-cube"/></svg><h2>Plugins</h2></div>
+          <div class="mod-search">
+            <input class="input" id="mod-query" placeholder="Search Modrinth for plugins…" autocomplete="off" style="flex:1">
+            <button class="btn" id="mod-search">Search</button>
+          </div>
+          <div class="list" id="mod-results"></div>
           <div class="list" id="plugins"><div class="item dim">…</div></div>
+          <p class="msg" id="mod-msg"></p>
         </div>
       </div>
 
@@ -889,6 +896,49 @@ document.getElementById("rcon-enable").addEventListener("click", async () => {
     smMsg("srv-msg", "RCON on, port " + d.port + " — restart the server");
     smLoadServers();
   } catch (e) { smMsg("srv-msg", e.message, true); }
+});
+
+async function smSearchMods() {
+  const box = document.getElementById("mod-results");
+  const msg = document.getElementById("mod-msg");
+  const q = document.getElementById("mod-query").value.trim();
+  msg.textContent = "";
+  box.innerHTML = '<div class="item dim">searching…</div>';
+  try {
+    const d = await smGet("/api/mods/search?q=" + encodeURIComponent(q));
+    box.innerHTML = d.results.map((m) => (
+      '<div class="item"><span class="grow">' + smEsc(m.title) +
+      (m.description ? ' <span class="dim">— ' + smEsc(m.description) + "</span>" : "") + "</span>" +
+      '<span class="dim">' + (m.downloads ? Math.round(m.downloads / 1000) + "k" : "") + "</span>" +
+      '<button class="btn small" data-mod-install="' + smEsc(m.id) + '">Install</button></div>'
+    )).join("") || '<div class="item dim">No results</div>';
+    msg.textContent = d.version
+      ? "Modrinth plugins for Minecraft " + d.version
+      : "Server version unknown, showing every plugin loader";
+  } catch (e) {
+    box.innerHTML = '<div class="item dim">' + smEsc(e.message) + "</div>";
+  }
+}
+
+document.getElementById("mod-search").addEventListener("click", smSearchMods);
+document.getElementById("mod-query").addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter") smSearchMods();
+});
+document.getElementById("mod-results").addEventListener("click", async (ev) => {
+  const btn = ev.target.closest("[data-mod-install]");
+  if (!btn) return;
+  const msg = document.getElementById("mod-msg");
+  btn.disabled = true;
+  msg.textContent = "installing…";
+  try {
+    const d = await smPost("/api/mods/install", { project: btn.dataset.modInstall });
+    msg.textContent = "installed " + d.installed + " (" + d.size_kb + " kB) — restart the server to load it";
+    await smLoadPlugins();
+  } catch (e) {
+    msg.textContent = e.message;
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 document.getElementById("plugins").addEventListener("click", async (ev) => {
