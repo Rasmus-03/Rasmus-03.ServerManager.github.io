@@ -268,7 +268,9 @@
   .jv-event{display:flex;align-items:center;gap:12px;padding:9px 2px;
             border-bottom:1px solid rgba(148,163,184,.09)}
   .jv-event:last-child{border-bottom:0}
-  .jv-event.next{border-top:1px dashed rgba(148,163,184,.22);margin-top:2px;padding-top:11px}
+  .jv-upnext{margin-top:10px;padding-top:10px;border-top:1px dashed rgba(148,163,184,.22)}
+  .jv-upnext:empty{display:none}
+  .jv-upnext .jv-event{border-bottom:0;padding:0}
   .jv-event.next .jv-when{color:var(--jv-emerald)}
   .jv-event.next .jv-what{color:#cbd5e1}
   .jv-when{color:var(--jv-cyan);font-size:11.5px;flex:none;width:104px;letter-spacing:.03em}
@@ -563,6 +565,7 @@
               <span class="jv-pill cyan" id="jv-cal-state">loading…</span>
             </div>
             <div class="jv-list" id="jv-schedule"></div>
+            <div class="jv-upnext" id="jv-next"></div>
           </div>
 
           <div class="jv-panel cyan jv-frame">
@@ -2036,6 +2039,17 @@ function jvNextWhen(nx) {
   return nx.all_day ? day + " · all day" : day + " " + nx.start;
 }
 
+// The upcoming event belongs under the list, never inside it: the list scrolls,
+// and an evening panel must still show what the morning brings.
+function jvUpNext(upcoming, todayIso) {
+  if (!upcoming || upcoming.date === todayIso) return "";
+  return '<div class="jv-event next"><span class="jv-when">' +
+    smEsc(jvNextWhen(upcoming)) + "</span>" +
+    '<span class="jv-what"><span class="jv-tag new">next</span> ' +
+    smEsc(upcoming.title) + "</span>" +
+    '<span class="jv-cal">' + smEsc(upcoming.calendar || "") + "</span></div>";
+}
+
 function jvRender(d) {
   $("jv-day").textContent = d.day || "–";
   $("jv-host").textContent = location.host || "localhost";
@@ -2127,22 +2141,16 @@ function jvRender(d) {
             '<span class="jv-what">' + smEsc(e.title) + "</span>" +
             '<span class="jv-cal">' + smEsc(e.calendar || "") + "</span></div>";
         });
-    // The upcoming event gets its own row only when it is not already listed
-    // above, so an evening shows today's rows and then tomorrow's first one.
     const todayIso = new Date().toLocaleDateString("sv-SE");
-    if (upcoming && upcoming.date !== todayIso) {
-      rows.push('<div class="jv-event next"><span class="jv-when">' +
-        smEsc(jvNextWhen(upcoming)) + "</span>" +
-        '<span class="jv-what"><span class="jv-tag new">next</span> ' +
-        smEsc(upcoming.title) + "</span>" +
-        '<span class="jv-cal">' + smEsc(upcoming.calendar || "") + "</span></div>");
-    }
     $("jv-schedule").innerHTML = (rows.length ? rows.join("")
-      : jvEmpty("nothing on the calendar today")) + jvNoteRow(cal.note);
+      : jvEmpty(upcoming ? "nothing left today" : "nothing on the calendar today")) +
+      jvNoteRow(cal.note);
+    $("jv-next").innerHTML = jvUpNext(upcoming, todayIso);
   } else {
     $("jv-cal-state").textContent = "unreadable";
     $("jv-cal-state").className = "jv-pill bad";
     $("jv-schedule").innerHTML = jvEmpty(cal.note || "the calendar cannot be read");
+    $("jv-next").innerHTML = "";
   }
 
   // ── messages ──
