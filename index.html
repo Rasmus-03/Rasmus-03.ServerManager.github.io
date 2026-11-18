@@ -498,7 +498,6 @@
           </div>
         </div>
       </div>
-    </section>
 
       <div class="grid">
         <div class="card">
@@ -532,8 +531,9 @@
         </div>
 
       </div>
+    </section>
 
-<section class="tab hidden" id="tab-network">
+    <section class="tab hidden" id="tab-network">
       <div class="card">
         <div class="card-head"><svg class="icon"><use href="#i-network"/></svg><h2>Network</h2></div>
         <div class="rows">
@@ -568,18 +568,38 @@
     </section>
 
     <section class="tab hidden" id="tab-jarvis">
-      <div class="card">
-        <div class="card-head"><svg class="icon"><use href="#i-bolt"/></svg><h2>Jarvis</h2>
-          <span class="msg" id="jv-state" style="margin-left:auto">checking…</span></div>
-        <div class="chat">
-          <div class="chat-log" id="jv-log"></div>
-          <form class="chat-compose" id="jv-form">
-            <textarea id="jv-input" rows="1"
-              placeholder="Ask Jarvis…  (Enter sends, Shift+Enter adds a line)"></textarea>
-            <button class="btn primary" type="submit" id="jv-send">Send</button>
-            <button class="btn" type="button" id="jv-clear" title="Forget this conversation">Clear</button>
-          </form>
-          <div class="msg" id="jv-note">Answered by OpenJarvis on the Mac.</div>
+      <div class="grid">
+        <div class="card">
+          <div class="card-head"><svg class="icon"><use href="#i-gauge"/></svg><h2>Today</h2>
+            <span class="msg" id="jv-day" style="margin-left:auto"></span></div>
+          <div class="rows" id="jv-schedule"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><svg class="icon"><use href="#i-cube"/></svg><h2>Messages today</h2>
+            <span class="msg" id="jv-msg-state" style="margin-left:auto">loading…</span></div>
+          <div class="rows" id="jv-messages"></div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="card-head"><svg class="icon"><use href="#i-server"/></svg><h2>Important mail</h2>
+            <span class="msg" id="jv-mail-state" style="margin-left:auto">loading…</span></div>
+          <div class="rows" id="jv-mail"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><svg class="icon"><use href="#i-bolt"/></svg><h2>Ask Jarvis</h2>
+            <span class="msg" id="jv-state" style="margin-left:auto">checking…</span></div>
+          <div class="chat">
+            <div class="chat-log" id="jv-log"></div>
+            <form class="chat-compose" id="jv-form">
+              <textarea id="jv-input" rows="1"
+                placeholder="Ask Jarvis…  (Enter sends, Shift+Enter adds a line)"></textarea>
+              <button class="btn primary" type="submit" id="jv-send">Send</button>
+              <button class="btn" type="button" id="jv-clear" title="Forget this conversation">Clear</button>
+            </form>
+            <div class="msg" id="jv-note">Answered by OpenJarvis on the Mac.</div>
+          </div>
         </div>
       </div>
     </section>
@@ -1717,16 +1737,77 @@ async function jvLoad() {
   state.className = "msg";
   state.textContent = "checking…";
   try {
-    const d = await smGet("/api/jarvis/status");
-    if (d.reachable) {
-      state.textContent = d.model ? "ready · " + d.model : "ready";
+    const st = await smGet("/api/jarvis/status");
+    if (st.reachable) {
+      state.textContent = st.model ? "ready · " + st.model : "ready";
     } else {
       state.className = "msg err";
-      state.textContent = d.note || "OpenJarvis is not answering";
+      state.textContent = st.note || "OpenJarvis is not answering";
     }
   } catch (e) {
     state.className = "msg err";
     state.textContent = smWhy(e);
+  }
+  try {
+    jvRender(await smGet("/api/briefing"));
+  } catch (e) {
+    inNote("jv-msg-state", smWhy(e), true);
+    inNote("jv-mail-state", smWhy(e), true);
+    inEmpty("jv-schedule", smWhy(e));
+  }
+}
+
+// A source that cannot fill its card says why, in a row under the card's own
+// list, so "nothing today" never has to stand in for "not readable".
+function jvNoteRow(source) {
+  return source && source.note
+    ? '<div class="row"><span>Note</span><span class="dim">' + smEsc(source.note) + "</span></div>"
+    : "";
+}
+
+function jvRender(d) {
+  $("jv-day").textContent = d.day || "";
+
+  const cal = d.calendar || {};
+  if (cal.available) {
+    const events = cal.items || [];
+    $("jv-schedule").innerHTML = (events.length
+      ? events.map((e) =>
+          '<div class="row"><span>' + (e.all_day ? "all day" : smEsc(e.start + "–" + e.end)) +
+          "</span><span>" + smEsc(e.title) + "</span></div>").join("")
+      : '<div class="row"><span class="dim">nothing on the calendar today</span></div>') +
+      jvNoteRow(cal);
+  } else {
+    $("jv-schedule").innerHTML = '<div class="row"><span>Calendar</span><span class="dim">' +
+      smEsc(cal.note || "unavailable") + "</span></div>";
+  }
+
+  const texts = d.messages || {};
+  if (texts.available) {
+    const items = texts.items || [];
+    const n = texts.unread || 0;
+    inNote("jv-msg-state", n ? n + " unread today" : "nothing unread today");
+    $("jv-messages").innerHTML = (items.length
+      ? items.map(inMessageRow).join("")
+      : '<div class="row"><span class="dim">no messages today</span></div>') +
+      jvNoteRow(texts);
+  } else {
+    inNote("jv-msg-state", "not readable", true);
+    inEmpty("jv-messages", texts.note || "unavailable");
+  }
+
+  const mail = d.mail || {};
+  if (mail.available) {
+    const items = mail.items || [];
+    const unread = items.filter((i) => i.unread).length;
+    inNote("jv-mail-state", unread ? unread + " unread" : "nothing unread");
+    $("jv-mail").innerHTML = (items.length
+      ? items.slice(0, 8).map(inMailRow).join("")
+      : '<div class="row"><span class="dim">nothing unread or flagged</span></div>') +
+      jvNoteRow(mail);
+  } else {
+    inNote("jv-mail-state", "not readable", true);
+    inEmpty("jv-mail", mail.note || "unavailable");
   }
 }
 
@@ -1747,9 +1828,8 @@ async function jvSend() {
     const d = await smPost("/api/jarvis/chat", { messages: JV.messages });
     pending.lastChild.textContent = d.reply;
     JV.messages.push({ role: "assistant", content: d.reply });
-    const usage = d.usage || {};
     $("jv-note").textContent = (d.model || "OpenJarvis") +
-      (usage.completion_tokens ? " · " + usage.completion_tokens + " tokens" : "");
+      (d.tokens ? " · " + d.tokens + " tokens" : "");
   } catch (e) {
     // The question that failed stays out of the history, so asking again is
     // one click rather than a retype.
@@ -1810,7 +1890,11 @@ async function inLoad() {
     const m = d.messages || {};
     if (m.available) {
       const n = m.unread || 0;
-      inNote("in-msg-state", n ? n + (n === 1 ? " unread" : " unread") : "nothing unread");
+      const days = m.window_days || 14;
+      // The window belongs in the number: "7 unread" alone would read as a
+      // backlog from years ago on a Mac that was off for a while.
+      inNote("in-msg-state", (n ? n + " unread" : "nothing unread") +
+        " · last " + days + " days");
       const items = m.items || [];
       $("in-msg-list").innerHTML = items.length
         ? items.map(inMessageRow).join("")
@@ -1825,9 +1909,12 @@ async function inLoad() {
     if (mail.available) {
       const accounts = mail.accounts || [];
       const unread = accounts.reduce((sum, a) => sum + (a.unread || 0), 0);
-      inNote("in-mail-state", unread ? unread + " unread" : "nothing unread");
+      const per = mail.window || 12;
+      inNote("in-mail-state", (unread ? unread + " unread" : "nothing unread") +
+        " · newest " + per + " per inbox");
       const items = mail.items || [];
-      const head = accounts.map((a) => smEsc(a.name) + " · " + a.unread + " unread").join("  |  ");
+      const head = accounts.map((a) => smEsc(a.name) + " · " + a.unread + " unread" +
+        (a.flagged ? " · " + a.flagged + " flagged" : "")).join("  |  ");
       $("in-mail-list").innerHTML =
         (head ? '<div class="row"><span>Accounts</span><span class="dim">' + head + "</span></div>" : "") +
         items.map(inMailRow).join("") +
