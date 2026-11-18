@@ -2291,6 +2291,7 @@ function jvHoldings(d) {
     ...(d.deposits ? [["Deposited", jvMoney(d.deposits.net, d.deposits.currency) +
       (d.deposits.count ? " · " + d.deposits.count + " in" : "")]] : []),
     ["Positions", String(pos.length)],
+    ...(d.cash_dkk ? [["Cash", jvMoney(d.cash_dkk, "DKK")]] : []),
     [d.source === "typed" ? "List" : "Export", d.updated || "—"],
     ["Source", d.source === "typed" ? "Your own list, priced daily" : "CSV export, no API"],
   ] : [
