@@ -2315,6 +2315,8 @@ function jvHoldings(d) {
       (d.deposits.count ? " · " + d.deposits.count + " in" : "")]] : []),
     ["Positions", String(pos.length)],
     ...(d.cash_dkk ? [["Cash", d.cash_dkk.toFixed(2).replace(".", ",") + " DKK"]] : []),
+    ...(d.plan ? [["Plan", jvMoney(d.plan.monthly, "DKK") + "/md fra " +
+      jvShortDay(d.plan.since)]] : []),
     [d.source === "typed" ? "List" : "Export", d.updated || "—"],
     ["Source", d.source === "typed" ? "Your own list, priced daily" : "CSV export, no API"],
   ] : [
