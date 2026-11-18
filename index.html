@@ -260,6 +260,8 @@
   .jv-tag{padding:1px 5px;border-radius:3px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;border:1px solid}
   .jv-tag.new{color:var(--jv-cyan);border-color:rgba(56,189,248,.4);background:rgba(56,189,248,.08)}
   .jv-tag.flag{color:var(--jv-amber);border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08)}
+  .jv-panel.violet .jv-panel-head h3 span{color:var(--jv-violet)}
+  .jv-up{color:#34d399}.jv-down{color:#f87171}.jv-flat{color:#7c8ea3}
   .jv-time{font-size:10.5px;color:#5b6b7f;flex:none;align-self:flex-start;padding-top:2px}
   .jv-packet-sub{margin-top:2px;font-size:11.5px;color:#8595a9;overflow:hidden;
                  text-overflow:ellipsis;white-space:nowrap}
@@ -575,6 +577,16 @@
               <span class="jv-pill cyan" id="jv-msg-state">loading…</span>
             </div>
             <div class="jv-list" id="jv-messages"></div>
+          </div>
+
+          <div class="jv-panel violet jv-frame">
+            <div class="jv-panel-head">
+              <span class="jv-tile violet"><svg class="icon"><use href="#i-cube"/></svg></span>
+              <h3>Holdings <span>/</span> Nordnet</h3>
+              <span class="jv-pill violet" id="jv-hold-state">loading…</span>
+            </div>
+            <div class="jv-telemetry" id="jv-hold-meta"></div>
+            <div class="jv-list" id="jv-hold"></div>
           </div>
         </section>
       </div>
@@ -2050,6 +2062,67 @@ function jvUpNext(upcoming, todayIso) {
     '<span class="jv-cal">' + smEsc(upcoming.calendar || "") + "</span></div>";
 }
 
+// ── nordnet holdings ──
+// The figures are read on the Mac and proxied like the brief: the Nordnet key
+// never reaches this page. Five minutes is plenty for a long-term portfolio.
+let HOLD_BUSY = false, HOLD_AT = 0;
+const HOLD_EVERY = 300000;
+
+function jvMoney(v, cur) {
+  const n = Number(v || 0);
+  return n.toLocaleString("da-DK", { maximumFractionDigits: 0 }) + (cur ? " " + cur : "");
+}
+
+function jvPct(p) {
+  const n = Number(p || 0);
+  const kind = n > 0 ? "up" : n < 0 ? "down" : "flat";
+  return '<span class="jv-' + kind + '">' + (n > 0 ? "+" : "") + n.toFixed(2) + "%</span>";
+}
+
+function jvPosRow(p) {
+  return '<div class="jv-event"><span class="jv-when">' + smEsc(String(p.qty)) + "×</span>" +
+    '<span class="jv-what">' + smEsc(p.name) + " " + jvPct(p.day_pct) + "</span>" +
+    '<span class="jv-cal">' + smEsc(jvMoney(p.value, p.currency)) + "</span></div>";
+}
+
+function jvHoldings(d) {
+  if (!d.available) {
+    $("jv-hold-state").textContent = "not set up";
+    $("jv-hold-state").className = "jv-pill bad";
+    $("jv-hold-meta").innerHTML = "";
+    $("jv-hold").innerHTML = jvEmpty(d.note || "no Nordnet figures");
+    return;
+  }
+  const pos = d.positions || [];
+  $("jv-hold-state").textContent = pos.length ? pos.length + " holdings" : "empty";
+  $("jv-hold-state").className = "jv-pill violet";
+  $("jv-hold-meta").innerHTML = [
+    ["Value", jvMoney(d.total_value, d.currency)],
+    ["P/L", jvMoney(d.total_profit, d.currency) + " · " + jvPct(d.total_profit_pct)],
+    ["Account", d.account || "—"],
+    ["Read", d.updated || "—"],
+  ].map(([k, v]) => '<div class="jv-row"><span>' + smEsc(k) + '</span><span class="jv-v">' +
+    (k === "P/L" ? v : smEsc(v)) + "</span></div>").join("");
+  $("jv-hold").innerHTML = pos.length
+    ? pos.slice(0, 8).map(jvPosRow).join("")
+    : jvEmpty("no open positions");
+}
+
+async function holdLoad() {
+  if (HOLD_BUSY) return;
+  HOLD_BUSY = true;
+  HOLD_AT = Date.now();
+  try {
+    jvHoldings(await smGet("/api/portfolio"));
+  } catch (e) {
+    $("jv-hold-state").textContent = "unreadable";
+    $("jv-hold-state").className = "jv-pill bad";
+    $("jv-hold").innerHTML = jvEmpty(smWhy(e));
+  } finally {
+    HOLD_BUSY = false;
+  }
+}
+
 function jvRender(d) {
   $("jv-day").textContent = d.day || "–";
   $("jv-host").textContent = location.host || "localhost";
@@ -2178,6 +2251,9 @@ async function briefLoad() {
   jvClock();
   try {
     jvRender(await smGet("/api/briefing"));
+    // The portfolio moves far slower than mail, so the minute tick only asks
+    // for it once every five minutes.
+    if (!HOLD_AT || Date.now() - HOLD_AT > HOLD_EVERY) holdLoad();
   } catch (e) {
     const why = smWhy(e);
     ["jv-mail", "jv-messages", "jv-schedule"].forEach((id) => { $(id).innerHTML = jvEmpty(why); });
