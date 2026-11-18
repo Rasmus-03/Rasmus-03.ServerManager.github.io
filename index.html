@@ -2149,15 +2149,23 @@ function jvShortDay(iso) {
     : String(iso);
 }
 
-// The newest point can be days old — a weekend, or a fund that reports late —
-// so the shortest period says how far back it really reaches instead of
-// claiming a day it does not have.
+// The start a period asks for: a Tuesday seven days back, New Year's Day, and
+// so on. "max" is the whole line and names no window.
+function jvIntendedStart(period, last) {
+  const end = jvDay(last.date);
+  if (!end || period[0] === "max") return null;
+  if (period[0] === "ytd") return String(end.getFullYear()) + "-01-01";
+  return new Date(end.getTime() - period[2] * 86400000).toISOString().slice(0, 10);
+}
+
+// A window rarely has a point on its exact start day — weekends, holidays, a
+// fund that reports late — so the button names the day it really compares
+// against rather than a window it does not have.
 function jvSpanLabel(period, base, last) {
   if (!base) return period[1];
-  const days = Math.round((jvDay(last.date) - jvDay(base.date)) / 86400000);
-  if (days <= 0) return period[1] + " — ingen tidligere dag";
-  if (period[0] !== "1d" || days === 1) return period[1];
-  return "Siden " + jvShortDay(base.date);
+  const start = jvIntendedStart(period, last);
+  return start && start !== base.date
+    ? "Siden " + jvShortDay(base.date) : period[1];
 }
 
 // Where a period starts: the newest point that is not after the start, or null
