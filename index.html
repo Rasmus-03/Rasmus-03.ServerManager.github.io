@@ -436,6 +436,128 @@
     </div>
 
     <section class="tab stack" id="tab-dashboard">
+      <div class="jv">
+
+        <!-- telemetry header -->
+        <header class="jv-head jv-frame">
+          <div class="jv-scan"></div>
+          <div class="jv-core">
+            <svg viewBox="0 0 64 64" class="jv-reactor">
+              <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(0,240,255,.18)" stroke-width="1.5"/>
+              <circle cx="32" cy="32" r="23" fill="none" stroke="#00f0ff" stroke-width="2"
+                      stroke-dasharray="18 8 6 8" class="jv-spin"/>
+              <circle cx="32" cy="32" r="16" fill="none" stroke="#0ea5e9" stroke-width="1.5"
+                      stroke-dasharray="10 6" class="jv-spin-rev"/>
+              <circle cx="32" cy="32" r="7" fill="rgba(0,240,255,.22)" stroke="#00f0ff" stroke-width="1.5"/>
+              <circle cx="32" cy="32" r="2.5" fill="#00f0ff"/>
+            </svg>
+          </div>
+          <div class="jv-head-main">
+            <div class="jv-head-line">
+              <h2 class="jv-title">TODAY <span>//</span> BRIEFING</h2>
+              <span class="jv-badge" id="jv-badge">
+                <span class="jv-pulse"></span><span id="jv-badge-text">SYNCING</span>
+              </span>
+            </div>
+            <div class="jv-chips">
+              <span>HOST <strong id="jv-host">–</strong></span>
+              <span>DAY <strong id="jv-day">–</strong></span>
+              <span>CLOCK <strong id="jv-clock">--:--:--</strong></span>
+            </div>
+          </div>
+        </header>
+
+        <!-- metric boxes -->
+        <section class="jv-kpis">
+          <div class="jv-kpi cyan">
+            <div class="jv-kpi-body">
+              <div class="jv-kpi-label"><span class="jv-idx">IDX-01</span>TEXTS TODAY</div>
+              <div class="jv-kpi-value"><span id="jv-kpi-texts">0</span>
+                <span class="jv-kpi-sub" id="jv-kpi-texts-sub">/ 0</span></div>
+              <div class="jv-kpi-foot">unread of today's messages</div>
+            </div>
+            <svg viewBox="0 0 44 44" class="jv-gauge">
+              <circle cx="22" cy="22" r="15" fill="none" stroke="#1c2b3a" stroke-width="3"/>
+              <circle id="jv-gauge-texts" cx="22" cy="22" r="15" fill="none" stroke="#00f0ff"
+                      stroke-width="3" stroke-dasharray="0 94" stroke-linecap="round"
+                      transform="rotate(-90 22 22)"/>
+            </svg>
+          </div>
+
+          <div class="jv-kpi amber">
+            <div class="jv-kpi-body">
+              <div class="jv-kpi-label"><span class="jv-idx">PRI-02</span>IMPORTANT MAIL</div>
+              <div class="jv-kpi-value"><span id="jv-kpi-mail">0</span>
+                <span class="jv-kpi-sub" id="jv-kpi-mail-sub">/ 0</span></div>
+              <div class="jv-kpi-foot">unread or flagged</div>
+            </div>
+            <svg viewBox="0 0 44 44" class="jv-gauge">
+              <circle cx="22" cy="22" r="15" fill="none" stroke="#1c2b3a" stroke-width="3"/>
+              <circle id="jv-gauge-mail" cx="22" cy="22" r="15" fill="none" stroke="#f59e0b"
+                      stroke-width="3" stroke-dasharray="0 94" stroke-linecap="round"
+                      transform="rotate(-90 22 22)"/>
+            </svg>
+          </div>
+
+          <div class="jv-kpi emerald">
+            <div class="jv-kpi-body">
+              <div class="jv-kpi-label"><span class="jv-idx">CAL-03</span>SCHEDULE</div>
+              <div class="jv-kpi-value"><span id="jv-kpi-cal">0</span>
+                <span class="jv-kpi-sub">today</span></div>
+              <div class="jv-kpi-foot" id="jv-kpi-cal-foot">nothing on the calendar</div>
+            </div>
+            <svg viewBox="0 0 44 44" class="jv-gauge">
+              <circle cx="22" cy="22" r="15" fill="none" stroke="#1c2b3a" stroke-width="3"/>
+              <circle id="jv-gauge-cal" cx="22" cy="22" r="15" fill="none" stroke="#10b981"
+                      stroke-width="3" stroke-dasharray="0 94" stroke-linecap="round"
+                      transform="rotate(-90 22 22)"/>
+            </svg>
+          </div>
+
+          <div class="jv-kpi violet">
+            <div class="jv-kpi-body">
+              <div class="jv-kpi-label"><span class="jv-idx">SRC-04</span>MAIL SOURCE</div>
+              <div class="jv-kpi-value"><span id="jv-kpi-src">–</span></div>
+              <div class="jv-kpi-foot" id="jv-kpi-src-foot">reading…</div>
+            </div>
+            <svg viewBox="0 0 44 44" class="jv-gauge">
+              <circle cx="22" cy="22" r="15" fill="none" stroke="#1c2b3a" stroke-width="3"/>
+              <circle cx="22" cy="22" r="15" fill="none" stroke="#a78bfa" stroke-width="3"
+                      stroke-dasharray="70 94" stroke-linecap="round" transform="rotate(-90 22 22)"/>
+            </svg>
+          </div>
+        </section>
+
+        <!-- mail, schedule, messages -->
+        <section class="jv-panels">
+          <div class="jv-panel amber jv-frame">
+            <div class="jv-panel-head">
+              <h3>IMPORTANT <span>//</span> MAIL STREAM</h3>
+              <span class="jv-pill amber" id="jv-mail-state">loading…</span>
+            </div>
+            <div class="jv-telemetry" id="jv-mail-meta">
+              <div class="jv-row"><span>Source</span><span class="jv-v">–</span></div>
+            </div>
+            <div class="jv-list" id="jv-mail"></div>
+          </div>
+
+          <div class="jv-panel cyan jv-frame">
+            <div class="jv-panel-head">
+              <h3>TODAY <span>//</span> SCHEDULE</h3>
+              <span class="jv-pill cyan" id="jv-cal-state">loading…</span>
+            </div>
+            <div class="jv-list" id="jv-schedule"></div>
+          </div>
+
+          <div class="jv-panel cyan jv-frame">
+            <div class="jv-panel-head">
+              <h3>MESSAGES <span>//</span> TODAY</h3>
+              <span class="jv-pill cyan" id="jv-msg-state">loading…</span>
+            </div>
+            <div class="jv-list" id="jv-messages"></div>
+          </div>
+        </section>
+      </div>
       <div class="card">
         <div class="card-head"><svg class="icon"><use href="#i-gauge"/></svg><h2>Resource Overview</h2></div>
         <div class="metrics">
@@ -689,148 +811,21 @@
     </section>
 
     <section class="tab hidden" id="tab-jarvis">
-      <div class="jv">
-
-        <!-- telemetry header -->
-        <header class="jv-head jv-frame">
-          <div class="jv-scan"></div>
-          <div class="jv-core">
-            <svg viewBox="0 0 64 64" class="jv-reactor">
-              <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(0,240,255,.18)" stroke-width="1.5"/>
-              <circle cx="32" cy="32" r="23" fill="none" stroke="#00f0ff" stroke-width="2"
-                      stroke-dasharray="18 8 6 8" class="jv-spin"/>
-              <circle cx="32" cy="32" r="16" fill="none" stroke="#0ea5e9" stroke-width="1.5"
-                      stroke-dasharray="10 6" class="jv-spin-rev"/>
-              <circle cx="32" cy="32" r="7" fill="rgba(0,240,255,.22)" stroke="#00f0ff" stroke-width="1.5"/>
-              <circle cx="32" cy="32" r="2.5" fill="#00f0ff"/>
-            </svg>
-          </div>
-          <div class="jv-head-main">
-            <div class="jv-head-line">
-              <h2 class="jv-title">J.A.R.V.I.S. <span>//</span> BRIEFING</h2>
-              <span class="jv-badge" id="jv-badge">
-                <span class="jv-pulse"></span><span id="jv-badge-text">SYNCING</span>
-              </span>
-            </div>
-            <div class="jv-chips">
-              <span>HOST <strong id="jv-host">–</strong></span>
-              <span>DAY <strong id="jv-day">–</strong></span>
-              <span>CLOCK <strong id="jv-clock">--:--:--</strong></span>
-              <span>AGENT <strong id="jv-state">checking…</strong></span>
-            </div>
-          </div>
-        </header>
-
-        <!-- metric boxes -->
-        <section class="jv-kpis">
-          <div class="jv-kpi cyan">
-            <div class="jv-kpi-body">
-              <div class="jv-kpi-label"><span class="jv-idx">IDX-01</span>TEXTS TODAY</div>
-              <div class="jv-kpi-value"><span id="jv-kpi-texts">0</span>
-                <span class="jv-kpi-sub" id="jv-kpi-texts-sub">/ 0</span></div>
-              <div class="jv-kpi-foot">unread of today's messages</div>
-            </div>
-            <svg viewBox="0 0 44 44" class="jv-gauge">
-              <circle cx="22" cy="22" r="15" fill="none" stroke="#1c2b3a" stroke-width="3"/>
-              <circle id="jv-gauge-texts" cx="22" cy="22" r="15" fill="none" stroke="#00f0ff"
-                      stroke-width="3" stroke-dasharray="0 94" stroke-linecap="round"
-                      transform="rotate(-90 22 22)"/>
-            </svg>
-          </div>
-
-          <div class="jv-kpi amber">
-            <div class="jv-kpi-body">
-              <div class="jv-kpi-label"><span class="jv-idx">PRI-02</span>IMPORTANT MAIL</div>
-              <div class="jv-kpi-value"><span id="jv-kpi-mail">0</span>
-                <span class="jv-kpi-sub" id="jv-kpi-mail-sub">/ 0</span></div>
-              <div class="jv-kpi-foot">unread or flagged</div>
-            </div>
-            <svg viewBox="0 0 44 44" class="jv-gauge">
-              <circle cx="22" cy="22" r="15" fill="none" stroke="#1c2b3a" stroke-width="3"/>
-              <circle id="jv-gauge-mail" cx="22" cy="22" r="15" fill="none" stroke="#f59e0b"
-                      stroke-width="3" stroke-dasharray="0 94" stroke-linecap="round"
-                      transform="rotate(-90 22 22)"/>
-            </svg>
-          </div>
-
-          <div class="jv-kpi emerald">
-            <div class="jv-kpi-body">
-              <div class="jv-kpi-label"><span class="jv-idx">CAL-03</span>SCHEDULE</div>
-              <div class="jv-kpi-value"><span id="jv-kpi-cal">0</span>
-                <span class="jv-kpi-sub">today</span></div>
-              <div class="jv-kpi-foot" id="jv-kpi-cal-foot">nothing on the calendar</div>
-            </div>
-            <svg viewBox="0 0 44 44" class="jv-gauge">
-              <circle cx="22" cy="22" r="15" fill="none" stroke="#1c2b3a" stroke-width="3"/>
-              <circle id="jv-gauge-cal" cx="22" cy="22" r="15" fill="none" stroke="#10b981"
-                      stroke-width="3" stroke-dasharray="0 94" stroke-linecap="round"
-                      transform="rotate(-90 22 22)"/>
-            </svg>
-          </div>
-
-          <div class="jv-kpi violet">
-            <div class="jv-kpi-body">
-              <div class="jv-kpi-label"><span class="jv-idx">SRC-04</span>MAIL SOURCE</div>
-              <div class="jv-kpi-value"><span id="jv-kpi-src">–</span></div>
-              <div class="jv-kpi-foot" id="jv-kpi-src-foot">reading…</div>
-            </div>
-            <svg viewBox="0 0 44 44" class="jv-gauge">
-              <circle cx="22" cy="22" r="15" fill="none" stroke="#1c2b3a" stroke-width="3"/>
-              <circle cx="22" cy="22" r="15" fill="none" stroke="#a78bfa" stroke-width="3"
-                      stroke-dasharray="70 94" stroke-linecap="round" transform="rotate(-90 22 22)"/>
-            </svg>
-          </div>
-        </section>
-
-        <!-- important mail + schedule -->
-        <section class="jv-panels">
-          <div class="jv-panel amber jv-frame">
-            <div class="jv-panel-head">
-              <h3>IMPORTANT <span>//</span> MAIL STREAM</h3>
-              <span class="jv-pill amber" id="jv-mail-state">loading…</span>
-            </div>
-            <div class="jv-telemetry" id="jv-mail-meta">
-              <div class="jv-row"><span>Source</span><span class="jv-v">–</span></div>
-            </div>
-            <div class="jv-list" id="jv-mail"></div>
-          </div>
-
-          <div class="jv-panel cyan jv-frame">
-            <div class="jv-panel-head">
-              <h3>TODAY <span>//</span> SCHEDULE</h3>
-              <span class="jv-pill cyan" id="jv-cal-state">loading…</span>
-            </div>
-            <div class="jv-list" id="jv-schedule"></div>
-          </div>
-        </section>
-
-        <!-- messages + chat -->
-        <section class="jv-panels">
-          <div class="jv-panel cyan jv-frame">
-            <div class="jv-panel-head">
-              <h3>MESSAGES <span>//</span> TODAY</h3>
-              <span class="jv-pill cyan" id="jv-msg-state">loading…</span>
-            </div>
-            <div class="jv-list" id="jv-messages"></div>
-          </div>
-
-          <div class="jv-panel violet jv-frame">
-            <div class="jv-panel-head">
-              <h3>ASK <span>//</span> JARVIS</h3>
-              <span class="jv-pill violet" id="jv-chat-state">local model</span>
-            </div>
-            <div class="chat jv-chat">
-              <div class="chat-log" id="jv-log"></div>
-              <form class="chat-compose" id="jv-form">
-                <textarea id="jv-input" rows="1"
-                  placeholder="Ask Jarvis…  (Enter sends, Shift+Enter adds a line)"></textarea>
-                <button class="btn primary" type="submit" id="jv-send">Send</button>
-                <button class="btn" type="button" id="jv-clear" title="Forget this conversation">Clear</button>
-              </form>
-              <div class="msg" id="jv-note">Answered by OpenJarvis on the Mac.</div>
-            </div>
-          </div>
-        </section>
+      <div class="card">
+        <div class="card-head">
+          <svg class="icon"><use href="#i-bolt"/></svg><h2>Jarvis</h2>
+          <span class="msg" id="jv-state" style="margin-left:auto">checking…</span>
+        </div>
+        <div class="chat">
+          <div class="chat-log" id="jv-log"></div>
+          <form class="chat-compose" id="jv-form">
+            <textarea id="jv-input" rows="1"
+              placeholder="Ask Jarvis…  (Enter sends, Shift+Enter adds a line)"></textarea>
+            <button class="btn primary" type="submit" id="jv-send">Send</button>
+            <button class="btn" type="button" id="jv-clear" title="Forget this conversation">Clear</button>
+          </form>
+          <div class="msg" id="jv-note">Answered by OpenJarvis on the Mac.</div>
+        </div>
       </div>
     </section>
   </main>
@@ -889,8 +884,8 @@ function setTab(tab) {
   if (TITLES[tab][1]) $("page-sub").textContent = TITLES[tab][1];
   if (tab === "console") getLog();
   if (tab === "server") smLoadTab();
-  if (tab === "dashboard") smLoadOrca();
-  if (tab === "jarvis") jvLoad();
+  if (tab === "dashboard") { smLoadOrca(); briefLoad(); }
+  if (tab === "jarvis") jvStatus();
   if (tab === "inbox") inLoad();
 }
 
@@ -958,7 +953,7 @@ $("connect-form").addEventListener("submit", async (e) => {
     $("password").value = "";
     showConnect(false);
     $("net-base").textContent = API;
-    getStatus(); getLog(); smLoadOrca();
+    getStatus(); getLog(); smLoadOrca(); briefLoad();
   } catch (err) {
     $("connect-msg").textContent = err.message || "Could not reach the backend.";
   } finally {
@@ -1936,7 +1931,7 @@ document.querySelectorAll("[data-copy]").forEach((btn) =>
   }));
 
 $("net-base").textContent = API;
-if (SESSION) { showConnect(false); getStatus(); getLog(); smLoadOrca(); }
+if (SESSION) { showConnect(false); getStatus(); getLog(); smLoadOrca(); briefLoad(); }
 else { showConnect(true); }
 setInterval(getStatus, 5000);
 setInterval(() => { if (!document.hidden && TAB === "dashboard" && SESSION) smLoadOrca(); }, 5000);
@@ -1979,7 +1974,7 @@ function jvClock() {
   const el = $("jv-clock");
   if (el) el.textContent = pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds());
 }
-setInterval(() => { if (TAB === "jarvis" && !document.hidden) jvClock(); }, 1000);
+setInterval(() => { if (TAB === "dashboard" && !document.hidden) jvClock(); }, 1000);
 
 function jvNoteRow(note) {
   return note ? '<div class="jv-note-row">' + smEsc(note) + "</div>" : "";
@@ -2100,25 +2095,9 @@ function jvRender(d) {
   }
 }
 
-async function jvLoad() {
+// The dashboard owns the briefing; the Jarvis tab only asks how the agent is.
+async function briefLoad() {
   jvClock();
-  const state = $("jv-state");
-  state.textContent = "checking…";
-  try {
-    const st = await smGet("/api/jarvis/status");
-    if (st.reachable) {
-      state.textContent = st.model || "ready";
-      $("jv-chat-state").textContent = st.model || "ready";
-    } else {
-      state.textContent = st.note ? "offline" : "offline";
-      $("jv-chat-state").textContent = "offline";
-      $("jv-chat-state").className = "jv-pill bad";
-    }
-  } catch (e) {
-    state.textContent = "unknown";
-    $("jv-chat-state").textContent = "unknown";
-    $("jv-chat-state").className = "jv-pill bad";
-  }
   try {
     jvRender(await smGet("/api/briefing"));
   } catch (e) {
@@ -2126,6 +2105,17 @@ async function jvLoad() {
     ["jv-mail", "jv-messages", "jv-schedule"].forEach((id) => { $(id).innerHTML = jvEmpty(why); });
     $("jv-badge-text").textContent = "partial";
     $("jv-badge").className = "jv-badge bad";
+  }
+}
+
+async function jvStatus() {
+  const state = $("jv-state");
+  state.textContent = "checking…";
+  try {
+    const st = await smGet("/api/jarvis/status");
+    state.textContent = st.reachable ? (st.model || "ready") : "offline";
+  } catch (e) {
+    state.textContent = "unknown";
   }
 }
 
