@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Server Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
 <style>
   /* Design tokens mirror Server Manager's SwiftUI palette (ContentView.swift):
      panelBlue, NSColor dark controlBackground cards, separator strokes. */
@@ -152,6 +155,124 @@
   .chat-compose textarea{flex:1;min-height:40px;max-height:140px;resize:vertical;padding:9px 11px;
     border-radius:8px;border:1px solid var(--stroke);background:rgba(0,0,0,.25);
     color:var(--text);font:inherit;font-size:12.8px}
+
+  /* ── jarvis hud ──────────────────────────────────────────
+     A Stark-style telemetry skin, scoped to #tab-jarvis so the rest of the
+     dashboard keeps its native macOS look. Every number on it is real: the
+     rings and boxes are filled from /api/briefing, and nothing is simulated. */
+  .jv{--jv-panel:#0d131a;--jv-card:#111922;--jv-nested:#090e14;--jv-line:#1c2b3a;
+      --jv-cyan:#00f0ff;--jv-amber:#f59e0b;--jv-emerald:#10b981;--jv-crimson:#ef4444;
+      --jv-violet:#a78bfa;
+      display:flex;flex-direction:column;gap:14px;font-variant-numeric:tabular-nums;
+      font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace}
+  .jv-frame{position:relative;background:rgba(13,19,26,.94);border:1px solid var(--jv-line);
+            box-shadow:inset 0 0 24px rgba(0,240,255,.02)}
+  .jv-frame::before,.jv-frame::after{content:"";position:absolute;width:10px;height:10px;pointer-events:none}
+  .jv-frame::before{top:-1px;left:-1px;border-top:2px solid var(--jv-cyan);border-left:2px solid var(--jv-cyan)}
+  .jv-frame::after{bottom:-1px;right:-1px;border-bottom:2px solid var(--jv-cyan);border-right:2px solid var(--jv-cyan)}
+
+  .jv-head{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:6px;
+           overflow:hidden;background:linear-gradient(180deg,#0b1118,#0a0f15)}
+  .jv-scan{position:absolute;top:0;left:0;height:1px;width:33%;
+           background:linear-gradient(90deg,transparent,var(--jv-cyan),transparent);
+           animation:jvScan 4.5s ease-in-out infinite}
+  @keyframes jvScan{0%{transform:translateX(-100%);opacity:0}40%{opacity:.7}100%{transform:translateX(300%);opacity:0}}
+  .jv-reactor{width:42px;height:42px;display:block}
+  .jv-spin{transform-origin:center;animation:jvSpin 14s linear infinite}
+  .jv-spin-rev{transform-origin:center;animation:jvSpin 9s linear infinite reverse}
+  @keyframes jvSpin{to{transform:rotate(360deg)}}
+  .jv-head-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .jv-title{margin:0;font-family:Rajdhani,system-ui,sans-serif;font-size:17px;font-weight:700;
+            letter-spacing:.14em;text-transform:uppercase;color:#fff}
+  .jv-title span{color:var(--jv-cyan)}
+  .jv-badge{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:3px;
+            font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--jv-cyan);
+            background:rgba(0,240,255,.1);border:1px solid rgba(0,240,255,.32)}
+  .jv-badge.bad{color:var(--jv-amber);background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.4)}
+  .jv-pulse{width:6px;height:6px;border-radius:50%;background:currentColor;animation:jvPulse 1.8s ease-in-out infinite}
+  @keyframes jvPulse{50%{opacity:.2}}
+  .jv-chips{display:flex;flex-wrap:wrap;gap:14px;margin-top:5px;font-size:11px;color:#8fa3b8}
+  .jv-chips strong{color:#dbe7f3;font-weight:500}
+
+  .jv-kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+  .jv-kpi{display:flex;align-items:center;justify-content:space-between;gap:10px;
+          background:var(--jv-card);border:1px solid var(--jv-line);border-radius:4px;padding:12px 14px}
+  .jv-kpi.cyan{border-color:rgba(0,240,255,.45);box-shadow:0 0 14px rgba(0,240,255,.1)}
+  .jv-kpi.amber{border-color:rgba(245,158,11,.4)}
+  .jv-kpi.emerald{border-color:rgba(16,185,129,.4)}
+  .jv-kpi.violet{border-color:rgba(167,139,250,.35)}
+  .jv-kpi-label{display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:.12em;
+                text-transform:uppercase;color:#7f95ac;margin-bottom:8px}
+  .jv-idx{color:var(--jv-cyan);font-weight:600}
+  .jv-kpi.amber .jv-idx{color:var(--jv-amber)}
+  .jv-kpi.emerald .jv-idx{color:var(--jv-emerald)}
+  .jv-kpi.violet .jv-idx{color:var(--jv-violet)}
+  .jv-kpi-value{font-size:22px;font-weight:700;color:#fff;line-height:1;white-space:nowrap;
+                overflow:hidden;text-overflow:ellipsis}
+  .jv-kpi-sub{font-size:11px;font-weight:600;color:#6b7f95;margin-left:4px}
+  .jv-kpi-foot{margin-top:6px;font-size:10px;color:#6b7f95;letter-spacing:.04em;
+               overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px}
+  .jv-gauge{width:44px;height:44px;flex:none}
+
+  .jv-panels{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));align-items:start}
+  .jv-panel{padding:12px 14px;border-radius:6px}
+  .jv-panel.amber::before,.jv-panel.amber::after{border-color:var(--jv-amber)}
+  .jv-panel.violet::before,.jv-panel.violet::after{border-color:var(--jv-violet)}
+  .jv-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .jv-panel-head h3{margin:0;font-family:Rajdhani,system-ui,sans-serif;font-size:13px;font-weight:700;
+                    letter-spacing:.12em;text-transform:uppercase;color:#fff}
+  .jv-panel-head h3 span{color:var(--jv-cyan)}
+  .jv-panel.amber .jv-panel-head h3 span{color:var(--jv-amber)}
+  .jv-pill{padding:2px 8px;border-radius:3px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+           border:1px solid;white-space:nowrap;color:#8fa3b8;border-color:var(--jv-line);background:transparent}
+  .jv-pill.cyan{color:var(--jv-cyan);background:rgba(0,240,255,.1);border-color:rgba(0,240,255,.35)}
+  .jv-pill.amber{color:var(--jv-amber);background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.35)}
+  .jv-pill.violet{color:var(--jv-violet);background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.35)}
+  .jv-pill.bad{color:var(--jv-crimson);background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4)}
+
+  .jv-telemetry{margin-bottom:10px;border-top:1px solid rgba(28,43,58,.85)}
+  .jv-row{display:flex;justify-content:space-between;gap:10px;padding:4px 0;
+          border-bottom:1px solid rgba(28,43,58,.55)}
+  .jv-row>span:first-child{color:#7f95ac;text-transform:uppercase;letter-spacing:.08em;font-size:10.5px}
+  .jv-v{color:#dbe7f3;font-size:11.5px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .jv-list{display:flex;flex-direction:column;gap:8px;max-height:330px;overflow:auto;padding-right:2px}
+  .jv-packet{background:var(--jv-nested);border:1px solid var(--jv-line);border-radius:4px;padding:8px 10px}
+  .jv-packet.amber:hover{border-color:rgba(245,158,11,.5)}
+  .jv-packet.cyan:hover{border-color:rgba(0,240,255,.5)}
+  .jv-packet-top{display:flex;align-items:center;gap:8px}
+  .jv-dot{width:7px;height:7px;border-radius:50%;background:#475569;flex:none}
+  .jv-dot.on{background:var(--jv-amber);box-shadow:0 0 8px rgba(245,158,11,.8)}
+  .jv-packet.cyan .jv-dot.on{background:var(--jv-cyan);box-shadow:0 0 8px rgba(0,240,255,.8)}
+  .jv-tag{padding:1px 6px;border-radius:2px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;border:1px solid}
+  .jv-tag.new{color:var(--jv-cyan);border-color:rgba(0,240,255,.4);background:rgba(0,240,255,.08)}
+  .jv-tag.flag{color:var(--jv-amber);border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08)}
+  .jv-subject{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+              font-size:12px;color:#eaf4ff}
+  .jv-time{font-size:10px;color:#64748b;flex:none}
+  .jv-packet-sub{margin-top:4px;padding-left:15px;font-size:11px;color:#94a3b8;
+                 overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .jv-empty{background:var(--jv-nested);border:1px solid var(--jv-line);border-radius:4px;
+            padding:14px;text-align:center;font-size:11px;color:#64748b}
+  .jv-event{display:flex;align-items:center;gap:12px;padding:7px 10px;background:var(--jv-nested);
+            border:1px solid var(--jv-line);border-radius:4px}
+  .jv-when{color:var(--jv-cyan);font-size:11.5px;flex:none;width:104px;letter-spacing:.03em}
+  .jv-what{font-size:12px;color:#eaf4ff;flex:1;min-width:0;overflow:hidden;
+           text-overflow:ellipsis;white-space:nowrap}
+  .jv-cal{color:#64748b;font-size:10px;flex:none;max-width:110px;overflow:hidden;
+          text-overflow:ellipsis;white-space:nowrap}
+  .jv-note-row{margin-top:8px;padding:7px 9px;border-left:2px solid rgba(245,158,11,.6);
+               background:rgba(245,158,11,.06);font-size:11px;color:#cbb391;line-height:1.45}
+
+  .jv-chat .chat-log{max-height:250px}
+  .jv-chat .bubble{font-family:inherit;font-size:11.5px;border-radius:3px;
+                   background:var(--jv-nested);border-color:var(--jv-line)}
+  .jv-chat .bubble.me{background:rgba(0,240,255,.08);border-color:rgba(0,240,255,.35);color:#dffcff}
+  .jv-chat .bubble .who{color:var(--jv-cyan)}
+  .jv-chat .chat-compose textarea{background:var(--jv-nested);border-color:var(--jv-line);
+                                  font-family:inherit;font-size:11.5px}
+  .jv-chat .btn{font-family:inherit;font-size:11.5px;border-radius:3px}
+  .jv-chat .msg{font-size:10.5px;color:#64748b}
 
   @media (max-width:760px){
     .app{flex-direction:column}
@@ -568,39 +689,148 @@
     </section>
 
     <section class="tab hidden" id="tab-jarvis">
-      <div class="grid">
-        <div class="card">
-          <div class="card-head"><svg class="icon"><use href="#i-gauge"/></svg><h2>Today</h2>
-            <span class="msg" id="jv-day" style="margin-left:auto"></span></div>
-          <div class="rows" id="jv-schedule"></div>
-        </div>
-        <div class="card">
-          <div class="card-head"><svg class="icon"><use href="#i-cube"/></svg><h2>Messages today</h2>
-            <span class="msg" id="jv-msg-state" style="margin-left:auto">loading…</span></div>
-          <div class="rows" id="jv-messages"></div>
-        </div>
-      </div>
+      <div class="jv">
 
-      <div class="grid">
-        <div class="card">
-          <div class="card-head"><svg class="icon"><use href="#i-server"/></svg><h2>Important mail</h2>
-            <span class="msg" id="jv-mail-state" style="margin-left:auto">loading…</span></div>
-          <div class="rows" id="jv-mail"></div>
-        </div>
-        <div class="card">
-          <div class="card-head"><svg class="icon"><use href="#i-bolt"/></svg><h2>Ask Jarvis</h2>
-            <span class="msg" id="jv-state" style="margin-left:auto">checking…</span></div>
-          <div class="chat">
-            <div class="chat-log" id="jv-log"></div>
-            <form class="chat-compose" id="jv-form">
-              <textarea id="jv-input" rows="1"
-                placeholder="Ask Jarvis…  (Enter sends, Shift+Enter adds a line)"></textarea>
-              <button class="btn primary" type="submit" id="jv-send">Send</button>
-              <button class="btn" type="button" id="jv-clear" title="Forget this conversation">Clear</button>
-            </form>
-            <div class="msg" id="jv-note">Answered by OpenJarvis on the Mac.</div>
+        <!-- telemetry header -->
+        <header class="jv-head jv-frame">
+          <div class="jv-scan"></div>
+          <div class="jv-core">
+            <svg viewBox="0 0 64 64" class="jv-reactor">
+              <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(0,240,255,.18)" stroke-width="1.5"/>
+              <circle cx="32" cy="32" r="23" fill="none" stroke="#00f0ff" stroke-width="2"
+                      stroke-dasharray="18 8 6 8" class="jv-spin"/>
+              <circle cx="32" cy="32" r="16" fill="none" stroke="#0ea5e9" stroke-width="1.5"
+                      stroke-dasharray="10 6" class="jv-spin-rev"/>
+              <circle cx="32" cy="32" r="7" fill="rgba(0,240,255,.22)" stroke="#00f0ff" stroke-width="1.5"/>
+              <circle cx="32" cy="32" r="2.5" fill="#00f0ff"/>
+            </svg>
           </div>
-        </div>
+          <div class="jv-head-main">
+            <div class="jv-head-line">
+              <h2 class="jv-title">J.A.R.V.I.S. <span>//</span> BRIEFING</h2>
+              <span class="jv-badge" id="jv-badge">
+                <span class="jv-pulse"></span><span id="jv-badge-text">SYNCING</span>
+              </span>
+            </div>
+            <div class="jv-chips">
+              <span>HOST <strong id="jv-host">–</strong></span>
+              <span>DAY <strong id="jv-day">–</strong></span>
+              <span>CLOCK <strong id="jv-clock">--:--:--</strong></span>
+              <span>AGENT <strong id="jv-state">checking…</strong></span>
+            </div>
+          </div>
+        </header>
+
+        <!-- metric boxes -->
+        <section class="jv-kpis">
+          <div class="jv-kpi cyan">
+            <div class="jv-kpi-body">
+              <div class="jv-kpi-label"><span class="jv-idx">IDX-01</span>TEXTS TODAY</div>
+              <div class="jv-kpi-value"><span id="jv-kpi-texts">0</span>
+                <span class="jv-kpi-sub" id="jv-kpi-texts-sub">/ 0</span></div>
+              <div class="jv-kpi-foot">unread of today's messages</div>
+            </div>
+            <svg viewBox="0 0 44 44" class="jv-gauge">
+              <circle cx="22" cy="22" r="15" fill="none" stroke="#1c2b3a" stroke-width="3"/>
+              <circle id="jv-gauge-texts" cx="22" cy="22" r="15" fill="none" stroke="#00f0ff"
+                      stroke-width="3" stroke-dasharray="0 94" stroke-linecap="round"
+                      transform="rotate(-90 22 22)"/>
+            </svg>
+          </div>
+
+          <div class="jv-kpi amber">
+            <div class="jv-kpi-body">
+              <div class="jv-kpi-label"><span class="jv-idx">PRI-02</span>IMPORTANT MAIL</div>
+              <div class="jv-kpi-value"><span id="jv-kpi-mail">0</span>
+                <span class="jv-kpi-sub" id="jv-kpi-mail-sub">/ 0</span></div>
+              <div class="jv-kpi-foot">unread or flagged</div>
+            </div>
+            <svg viewBox="0 0 44 44" class="jv-gauge">
+              <circle cx="22" cy="22" r="15" fill="none" stroke="#1c2b3a" stroke-width="3"/>
+              <circle id="jv-gauge-mail" cx="22" cy="22" r="15" fill="none" stroke="#f59e0b"
+                      stroke-width="3" stroke-dasharray="0 94" stroke-linecap="round"
+                      transform="rotate(-90 22 22)"/>
+            </svg>
+          </div>
+
+          <div class="jv-kpi emerald">
+            <div class="jv-kpi-body">
+              <div class="jv-kpi-label"><span class="jv-idx">CAL-03</span>SCHEDULE</div>
+              <div class="jv-kpi-value"><span id="jv-kpi-cal">0</span>
+                <span class="jv-kpi-sub">today</span></div>
+              <div class="jv-kpi-foot" id="jv-kpi-cal-foot">nothing on the calendar</div>
+            </div>
+            <svg viewBox="0 0 44 44" class="jv-gauge">
+              <circle cx="22" cy="22" r="15" fill="none" stroke="#1c2b3a" stroke-width="3"/>
+              <circle id="jv-gauge-cal" cx="22" cy="22" r="15" fill="none" stroke="#10b981"
+                      stroke-width="3" stroke-dasharray="0 94" stroke-linecap="round"
+                      transform="rotate(-90 22 22)"/>
+            </svg>
+          </div>
+
+          <div class="jv-kpi violet">
+            <div class="jv-kpi-body">
+              <div class="jv-kpi-label"><span class="jv-idx">SRC-04</span>MAIL SOURCE</div>
+              <div class="jv-kpi-value"><span id="jv-kpi-src">–</span></div>
+              <div class="jv-kpi-foot" id="jv-kpi-src-foot">reading…</div>
+            </div>
+            <svg viewBox="0 0 44 44" class="jv-gauge">
+              <circle cx="22" cy="22" r="15" fill="none" stroke="#1c2b3a" stroke-width="3"/>
+              <circle cx="22" cy="22" r="15" fill="none" stroke="#a78bfa" stroke-width="3"
+                      stroke-dasharray="70 94" stroke-linecap="round" transform="rotate(-90 22 22)"/>
+            </svg>
+          </div>
+        </section>
+
+        <!-- important mail + schedule -->
+        <section class="jv-panels">
+          <div class="jv-panel amber jv-frame">
+            <div class="jv-panel-head">
+              <h3>IMPORTANT <span>//</span> MAIL STREAM</h3>
+              <span class="jv-pill amber" id="jv-mail-state">loading…</span>
+            </div>
+            <div class="jv-telemetry" id="jv-mail-meta">
+              <div class="jv-row"><span>Source</span><span class="jv-v">–</span></div>
+            </div>
+            <div class="jv-list" id="jv-mail"></div>
+          </div>
+
+          <div class="jv-panel cyan jv-frame">
+            <div class="jv-panel-head">
+              <h3>TODAY <span>//</span> SCHEDULE</h3>
+              <span class="jv-pill cyan" id="jv-cal-state">loading…</span>
+            </div>
+            <div class="jv-list" id="jv-schedule"></div>
+          </div>
+        </section>
+
+        <!-- messages + chat -->
+        <section class="jv-panels">
+          <div class="jv-panel cyan jv-frame">
+            <div class="jv-panel-head">
+              <h3>MESSAGES <span>//</span> TODAY</h3>
+              <span class="jv-pill cyan" id="jv-msg-state">loading…</span>
+            </div>
+            <div class="jv-list" id="jv-messages"></div>
+          </div>
+
+          <div class="jv-panel violet jv-frame">
+            <div class="jv-panel-head">
+              <h3>ASK <span>//</span> JARVIS</h3>
+              <span class="jv-pill violet" id="jv-chat-state">local model</span>
+            </div>
+            <div class="chat jv-chat">
+              <div class="chat-log" id="jv-log"></div>
+              <form class="chat-compose" id="jv-form">
+                <textarea id="jv-input" rows="1"
+                  placeholder="Ask Jarvis…  (Enter sends, Shift+Enter adds a line)"></textarea>
+                <button class="btn primary" type="submit" id="jv-send">Send</button>
+                <button class="btn" type="button" id="jv-clear" title="Forget this conversation">Clear</button>
+              </form>
+              <div class="msg" id="jv-note">Answered by OpenJarvis on the Mac.</div>
+            </div>
+          </div>
+        </section>
       </div>
     </section>
   </main>
@@ -645,7 +875,7 @@ const TITLES = {
   console: ["Console", "Live output from the Paper server"],
   server: ["Server", "Commands, settings, plugins, backups and updates"],
   network: ["Network", "How this page reaches the Mac"],
-  jarvis: ["Jarvis", "Your OpenJarvis agent, running on the Mac"],
+  jarvis: ["Jarvis", "Today's schedule, messages and mail, from the Mac"],
   inbox: ["Inbox", "Unread messages and mail waiting on the Mac"],
 };
 
@@ -1732,82 +1962,170 @@ function jvBubble(who, text, cls) {
   return div;
 }
 
+// The HUD shows only what the Mac reports: the rings are proportions of the
+// real counts, and an unreadable source says so instead of drawing a zero.
+const JV_RING = 2 * Math.PI * 15;
+
+function jvRing(id, fraction) {
+  const el = $(id);
+  if (!el) return;
+  const part = Math.max(0, Math.min(1, fraction || 0)) * JV_RING;
+  el.setAttribute("stroke-dasharray", part.toFixed(1) + " " + JV_RING.toFixed(1));
+}
+
+function jvClock() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const el = $("jv-clock");
+  if (el) el.textContent = pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds());
+}
+setInterval(() => { if (TAB === "jarvis" && !document.hidden) jvClock(); }, 1000);
+
+function jvNoteRow(note) {
+  return note ? '<div class="jv-note-row">' + smEsc(note) + "</div>" : "";
+}
+
+function jvEmpty(text) {
+  return '<div class="jv-empty">' + smEsc(text) + "</div>";
+}
+
+// One packet row: unread dot, tags, the line that matters, and when it arrived.
+function jvPacket(item, tone) {
+  const tag = item.unread ? '<span class="jv-tag new">new</span>' : "";
+  const flag = item.flagged ? '<span class="jv-tag flag">flag</span>' : "";
+  const head = tone === "amber" ? (item.subject || "(no subject)") : (item.who || "unknown");
+  const sub = tone === "amber" ? (item.sender || "") : (item.text || "");
+  return '<div class="jv-packet ' + tone + '">' +
+    '<div class="jv-packet-top"><span class="jv-dot' + (item.unread ? " on" : "") + '"></span>' +
+    tag + flag + '<span class="jv-subject">' + smEsc(head) + "</span>" +
+    '<span class="jv-time">' + smEsc(item.at || "") + "</span></div>" +
+    '<div class="jv-packet-sub">' + smEsc(sub) + "</div></div>";
+}
+
+function jvRender(d) {
+  $("jv-day").textContent = d.day || "–";
+  $("jv-host").textContent = location.host || "localhost";
+
+  const cal = d.calendar || {};
+  const texts = d.messages || {};
+  const mail = d.mail || {};
+  const textItems = texts.items || [];
+  const mailItems = mail.items || [];
+  const events = cal.items || [];
+  const important = mailItems.filter((i) => i.unread || i.flagged);
+
+  // ── metric boxes ──
+  $("jv-kpi-texts").textContent = String(texts.unread || 0);
+  $("jv-kpi-texts-sub").textContent = "/ " + textItems.length;
+  jvRing("jv-gauge-texts", textItems.length ? (texts.unread || 0) / textItems.length : 0);
+
+  $("jv-kpi-mail").textContent = String(important.length);
+  $("jv-kpi-mail-sub").textContent = "/ " + mailItems.length;
+  jvRing("jv-gauge-mail", mailItems.length ? important.length / mailItems.length : 0);
+
+  $("jv-kpi-cal").textContent = String(events.length);
+  $("jv-kpi-cal-foot").textContent = !cal.available
+    ? "calendar not readable"
+    : events.length
+      ? (events[0].all_day ? "all day" : "first at " + events[0].start) + " · " + events[0].title
+      : "nothing on the calendar";
+  jvRing("jv-gauge-cal", Math.min(1, events.length / 6));
+
+  const source = mail.source || "";
+  $("jv-kpi-src").textContent = source === "imap" ? "IMAP"
+    : source === "index" ? "INDEX" : "–";
+  $("jv-kpi-src-foot").textContent = source === "imap" ? "live from the server"
+    : source === "index" ? "Mail's index, read-only" : "no mail source";
+
+  const degraded = !texts.available || !mail.available || !cal.available;
+  $("jv-badge-text").textContent = degraded ? "partial" : "online";
+  $("jv-badge").className = "jv-badge" + (degraded ? " bad" : "");
+
+  // ── important mail ──
+  const meta = [
+    ["Source", source === "imap" ? "IMAP · live"
+      : source === "index" ? "Mail index · read-only" : "none"],
+    ["Unread", String(mailItems.filter((i) => i.unread).length)],
+    ["Flagged", String(mailItems.filter((i) => i.flagged).length)],
+    ["Window", "newest " + (mail.window || 0) + " per inbox"],
+  ];
+  if ((mail.accounts || []).length) {
+    meta.push(["Accounts", mail.accounts.map((a) => a.name + " " + a.unread).join(" · ")]);
+  }
+  $("jv-mail-meta").innerHTML = meta.map(([k, v]) =>
+    '<div class="jv-row"><span>' + smEsc(k) + '</span><span class="jv-v">' +
+    smEsc(v) + "</span></div>").join("");
+
+  if (mail.available) {
+    const unread = mailItems.filter((i) => i.unread).length;
+    $("jv-mail-state").textContent = unread ? unread + " unread" : "nothing unread";
+    $("jv-mail-state").className = "jv-pill amber";
+    $("jv-mail").innerHTML = (mailItems.length
+      ? mailItems.slice(0, 8).map((i) => jvPacket(i, "amber")).join("")
+      : jvEmpty("nothing unread or flagged")) + jvNoteRow(mail.note);
+  } else {
+    $("jv-mail-state").textContent = "unreadable";
+    $("jv-mail-state").className = "jv-pill bad";
+    $("jv-mail").innerHTML = jvEmpty(mail.note || "mail cannot be read");
+  }
+
+  // ── schedule ──
+  if (cal.available) {
+    $("jv-cal-state").textContent = events.length ? events.length + " today" : "clear";
+    $("jv-cal-state").className = "jv-pill cyan";
+    $("jv-schedule").innerHTML = (events.length
+      ? events.map((e) =>
+          '<div class="jv-event"><span class="jv-when">' +
+          (e.all_day ? "all day" : smEsc(e.start) + "–" + smEsc(e.end)) + "</span>" +
+          '<span class="jv-what">' + smEsc(e.title) + "</span>" +
+          '<span class="jv-cal">' + smEsc(e.calendar || "") + "</span></div>").join("")
+      : jvEmpty("nothing on the calendar today")) + jvNoteRow(cal.note);
+  } else {
+    $("jv-cal-state").textContent = "unreadable";
+    $("jv-cal-state").className = "jv-pill bad";
+    $("jv-schedule").innerHTML = jvEmpty(cal.note || "the calendar cannot be read");
+  }
+
+  // ── messages ──
+  if (texts.available) {
+    $("jv-msg-state").textContent = texts.unread ? texts.unread + " unread" : "nothing unread";
+    $("jv-msg-state").className = "jv-pill cyan";
+    $("jv-messages").innerHTML = (textItems.length
+      ? textItems.slice(0, 8).map((i) => jvPacket(i, "cyan")).join("")
+      : jvEmpty("no messages today")) + jvNoteRow(texts.note);
+  } else {
+    $("jv-msg-state").textContent = "unreadable";
+    $("jv-msg-state").className = "jv-pill bad";
+    $("jv-messages").innerHTML = jvEmpty(texts.note || "the Messages database cannot be read");
+  }
+}
+
 async function jvLoad() {
+  jvClock();
   const state = $("jv-state");
-  state.className = "msg";
   state.textContent = "checking…";
   try {
     const st = await smGet("/api/jarvis/status");
     if (st.reachable) {
-      state.textContent = st.model ? "ready · " + st.model : "ready";
+      state.textContent = st.model || "ready";
+      $("jv-chat-state").textContent = st.model || "ready";
     } else {
-      state.className = "msg err";
-      state.textContent = st.note || "OpenJarvis is not answering";
+      state.textContent = st.note ? "offline" : "offline";
+      $("jv-chat-state").textContent = "offline";
+      $("jv-chat-state").className = "jv-pill bad";
     }
   } catch (e) {
-    state.className = "msg err";
-    state.textContent = smWhy(e);
+    state.textContent = "unknown";
+    $("jv-chat-state").textContent = "unknown";
+    $("jv-chat-state").className = "jv-pill bad";
   }
   try {
     jvRender(await smGet("/api/briefing"));
   } catch (e) {
-    inNote("jv-msg-state", smWhy(e), true);
-    inNote("jv-mail-state", smWhy(e), true);
-    inEmpty("jv-schedule", smWhy(e));
-  }
-}
-
-// A source that cannot fill its card says why, in a row under the card's own
-// list, so "nothing today" never has to stand in for "not readable".
-function jvNoteRow(source) {
-  return source && source.note
-    ? '<div class="row"><span>Note</span><span class="dim">' + smEsc(source.note) + "</span></div>"
-    : "";
-}
-
-function jvRender(d) {
-  $("jv-day").textContent = d.day || "";
-
-  const cal = d.calendar || {};
-  if (cal.available) {
-    const events = cal.items || [];
-    $("jv-schedule").innerHTML = (events.length
-      ? events.map((e) =>
-          '<div class="row"><span>' + (e.all_day ? "all day" : smEsc(e.start + "–" + e.end)) +
-          "</span><span>" + smEsc(e.title) + "</span></div>").join("")
-      : '<div class="row"><span class="dim">nothing on the calendar today</span></div>') +
-      jvNoteRow(cal);
-  } else {
-    $("jv-schedule").innerHTML = '<div class="row"><span>Calendar</span><span class="dim">' +
-      smEsc(cal.note || "unavailable") + "</span></div>";
-  }
-
-  const texts = d.messages || {};
-  if (texts.available) {
-    const items = texts.items || [];
-    const n = texts.unread || 0;
-    inNote("jv-msg-state", n ? n + " unread today" : "nothing unread today");
-    $("jv-messages").innerHTML = (items.length
-      ? items.map(inMessageRow).join("")
-      : '<div class="row"><span class="dim">no messages today</span></div>') +
-      jvNoteRow(texts);
-  } else {
-    inNote("jv-msg-state", "not readable", true);
-    inEmpty("jv-messages", texts.note || "unavailable");
-  }
-
-  const mail = d.mail || {};
-  if (mail.available) {
-    const items = mail.items || [];
-    const unread = items.filter((i) => i.unread).length;
-    inNote("jv-mail-state", unread ? unread + " unread" : "nothing unread");
-    $("jv-mail").innerHTML = (items.length
-      ? items.slice(0, 8).map(inMailRow).join("")
-      : '<div class="row"><span class="dim">nothing unread or flagged</span></div>') +
-      jvNoteRow(mail);
-  } else {
-    inNote("jv-mail-state", "not readable", true);
-    inEmpty("jv-mail", mail.note || "unavailable");
+    const why = smWhy(e);
+    ["jv-mail", "jv-messages", "jv-schedule"].forEach((id) => { $(id).innerHTML = jvEmpty(why); });
+    $("jv-badge-text").textContent = "partial";
+    $("jv-badge").className = "jv-badge bad";
   }
 }
 
