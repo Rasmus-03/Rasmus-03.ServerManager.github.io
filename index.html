@@ -579,16 +579,19 @@
             <div class="jv-list" id="jv-messages"></div>
           </div>
 
-          <div class="jv-panel violet jv-frame">
-            <div class="jv-panel-head">
-              <span class="jv-tile violet"><svg class="icon"><use href="#i-cube"/></svg></span>
-              <h3>Holdings <span>/</span> Nordnet</h3>
-              <span class="jv-pill violet" id="jv-hold-state">loading…</span>
-            </div>
-            <div class="jv-telemetry" id="jv-hold-meta"></div>
-            <div class="jv-list" id="jv-hold"></div>
-          </div>
         </section>
+
+        <!-- holdings: a row of its own under the three panels, full width like
+             the header, so a value-over-time graph has room beside the figures -->
+        <div class="jv-panel violet jv-frame" id="jv-hold-panel">
+          <div class="jv-panel-head">
+            <span class="jv-tile violet"><svg class="icon"><use href="#i-cube"/></svg></span>
+            <h3>Holdings <span>/</span> Nordnet</h3>
+            <span class="jv-pill violet" id="jv-hold-state">loading…</span>
+          </div>
+          <div class="jv-telemetry" id="jv-hold-meta"></div>
+          <div class="jv-list" id="jv-hold"></div>
+        </div>
       </div>
       <div class="card">
         <div class="card-head"><svg class="icon"><use href="#i-gauge"/></svg><h2>Resource Overview</h2></div>
