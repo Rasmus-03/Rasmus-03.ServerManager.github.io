@@ -266,9 +266,29 @@
   .jv-hold-body{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
   .jv-hold-figures{flex:1 1 340px;min-width:0}
   .jv-chart{flex:1 1 420px;min-width:240px}
-  .jv-spark{display:block;width:100%;height:190px}
-  .jv-chart-foot{display:flex;justify-content:space-between;gap:10px;margin-top:6px;
-                 font-size:10.5px;color:#5b6b7f}
+  .jv-spark{display:block;width:100%;height:168px}
+
+  .jv-eq-label{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:#7c8ea3}
+  .jv-eq-value{display:block;margin-top:1px;font-family:Rajdhani,system-ui,sans-serif;
+               font-size:30px;font-weight:700;line-height:1.05;color:#f8fafc}
+  .jv-eq-change{display:block;margin-top:2px;font-size:11.5px;color:#8fa3b8}
+  .jv-eq-change.jv-gain,.jv-eq-period .jv-gain{color:#34d399}
+  .jv-eq-change.jv-loss,.jv-eq-period .jv-loss{color:#f87171}
+  .jv-eq-plot{position:relative;margin-top:8px;padding-right:44px}
+  .jv-eq-y{position:absolute;top:0;bottom:0;right:0;display:flex;flex-direction:column;
+           justify-content:space-between;font-size:10px;color:#5b6b7f;text-align:right;
+           pointer-events:none}
+  .jv-eq-dates{display:flex;justify-content:space-between;gap:6px;margin-top:5px;
+               padding-right:44px;font-size:10px;color:#5b6b7f}
+  .jv-eq-periods{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+  .jv-eq-period{display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 8px;
+                border:1px solid rgba(148,163,184,.18);border-radius:8px;background:transparent;
+                color:#8fa3b8;font:inherit;font-size:10.5px;line-height:1.25;cursor:pointer}
+  .jv-eq-period b{font-weight:600;font-size:10.5px;color:#8fa3b8}
+  .jv-eq-period.active{border-color:rgba(52,211,153,.45);background:rgba(52,211,153,.10);
+                       color:#e2e8f0}
+  .jv-eq-period:hover:not(:disabled){border-color:rgba(148,163,184,.4)}
+  .jv-eq-period:disabled{opacity:.4;cursor:default}
   .jv-time{font-size:10.5px;color:#5b6b7f;flex:none;align-self:flex-start;padding-top:2px}
   .jv-packet-sub{margin-top:2px;font-size:11.5px;color:#8595a9;overflow:hidden;
                  text-overflow:ellipsis;white-space:nowrap}
@@ -2106,39 +2126,150 @@ function jvPosRow(p, exported) {
 
 // One point per day, drawn as a line: the figures keep the left side of the
 // wide box and the shape takes the right, so no second box is needed.
-function jvChart(history) {
-  const points = (history || []).filter((p) => typeof p.value === "number");
-  if (points.length < 2) {
-    return jvEmpty(points.length ? "one day so far — the line needs two"
-      : "the line starts with its second day");
-  }
-  const w = 640, h = 190, pad = 10;
-  const values = points.map((p) => p.value);
-  const min = Math.min(...values), max = Math.max(...values);
-  const span = (max - min) || Math.max(1, Math.abs(max) * 0.01);
-  const x = (i) => pad + (i * (w - pad * 2)) / (points.length - 1);
-  const y = (v) => h - pad - ((v - min) / span) * (h - pad * 2);
-  const line = points.map((p, i) =>
-    (i ? "L" : "M") + x(i).toFixed(1) + " " + y(p.value).toFixed(1)).join(" ");
-  const area = line + " L" + x(points.length - 1).toFixed(1) + " " + (h - pad) +
-    " L" + x(0).toFixed(1) + " " + (h - pad) + " Z";
-  const last = points[points.length - 1];
-  return '<svg class="jv-spark" viewBox="0 0 ' + w + " " + h + '" ' +
-    'preserveAspectRatio="none" role="img" aria-label="value over time">' +
-    '<defs><linearGradient id="jvSparkFill" x1="0" y1="0" x2="0" y2="1">' +
-    '<stop offset="0%" stop-color="rgba(167,139,250,.38)"/>' +
-    '<stop offset="100%" stop-color="rgba(167,139,250,0)"/></linearGradient></defs>' +
-    '<path d="' + area + '" fill="url(#jvSparkFill)"/>' +
-    '<path d="' + line + '" fill="none" stroke="#a78bfa" stroke-width="2" ' +
-    'vector-effect="non-scaling-stroke"/>' +
-    '<circle cx="' + x(points.length - 1).toFixed(1) + '" cy="' + y(last.value).toFixed(1) +
-    '" r="3" fill="#a78bfa"/></svg>' +
-    '<div class="jv-chart-foot"><span>' + smEsc(points[0].date) + "</span>" +
-    "<span>" + smEsc(jvMoney(max, "")) + " / " + smEsc(jvMoney(min, "")) + "</span>" +
-    "<span>" + smEsc(last.date) + "</span></div>";
+// The wide box shows the account the way a broker does: the equity as one big
+// number, the line under it and the periods beside each other. A period only
+// reports a change when the days behind it really exist, so nothing is made up
+// while the history is still short.
+let HOLD_LAST = null;
+let HOLD_PERIOD = "1m";
+const HOLD_PERIODS = [
+  ["1d", "I dag", 1], ["1w", "1 uge", 7], ["1m", "1 md", 31], ["3m", "3 md", 92],
+  ["6m", "6 md", 183], ["ytd", "i år", 0], ["1y", "1 år", 365], ["3y", "3 år", 1095],
+  ["max", "max", Infinity],
+];
+
+function jvDay(iso) {
+  const when = new Date(String(iso) + "T12:00");
+  return Number.isNaN(when.getTime()) ? null : when;
 }
 
+function jvShortDay(iso) {
+  const when = jvDay(iso);
+  return when ? when.toLocaleDateString("da-DK", { day: "numeric", month: "short" })
+    : String(iso);
+}
+
+// Where a period starts: the newest point that is not after the start, or null
+// when the history does not reach that far back.
+function jvBase(points, days) {
+  const last = jvDay(points[points.length - 1].date);
+  const first = jvDay(points[0].date);
+  if (!last || !first) return null;
+  const start = days === Infinity ? first
+    : days === 0 ? new Date(last.getFullYear(), 0, 1)
+    : new Date(last.getTime() - days * 86400000);
+  if (first > start) return null;
+  let pick = points[0];
+  for (const p of points) {
+    const when = jvDay(p.date);
+    if (when && when <= start) pick = p;
+    else break;
+  }
+  return pick;
+}
+
+function jvChange(points, days) {
+  const base = jvBase(points, days);
+  if (!base) return null;
+  const change = points[points.length - 1].value - base.value;
+  return { change: change, pct: base.value ? (change / base.value) * 100 : null };
+}
+
+function jvSigned(amount, currency) {
+  const sign = amount > 0 ? "+" : amount < 0 ? "−" : "";
+  return sign + jvMoney(Math.abs(amount), currency || "");
+}
+
+// Plain text, unlike jvPct, which colours its answer for the P/L row.
+function jvPctText(pct) {
+  if (typeof pct !== "number" || !isFinite(pct)) return "";
+  const sign = pct > 0 ? "+" : pct < 0 ? "−" : "";
+  return sign + Math.abs(pct).toFixed(2).replace(".", ",") + "%";
+}
+
+function jvChart(history, currency) {
+  const points = (history || []).filter((p) => typeof p.value === "number" && jvDay(p.date))
+    .slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  if (!points.length) return jvEmpty("the line starts with its first day");
+  const last = points[points.length - 1];
+  const pick = HOLD_PERIODS.find((row) => row[0] === HOLD_PERIOD) || HOLD_PERIODS[2];
+  const base = jvBase(points, pick[2]);
+  const shown = jvChange(points, pick[2]);
+  const part = base ? points.slice(points.indexOf(base)) : points;
+  const values = part.map((p) => p.value);
+  const top = Math.max(...values);
+  const floor = Math.min(...values);
+  // A little air above and below, and never a zero line unless the values are
+  // near it: pinning 0-76.437 flattens the shape the box exists to show.
+  const air = ((top - floor) || Math.abs(top) * 0.02) * 0.12;
+  const high = top + air;
+  const low = Math.min(0, floor) < 0 ? floor - air : Math.max(0, floor - air);
+  const span = (high - low) || Math.max(1, Math.abs(high) * 0.01);
+  const w = 640, h = 168, pad = 8;
+  const x = (i) => pad + (i * (w - pad * 2)) / Math.max(1, part.length - 1);
+  const y = (v) => h - pad - ((v - low) / span) * (h - pad * 2);
+  const line = part.map((p, i) => (i ? "L" : "M") + x(i).toFixed(1) + " "
+    + y(p.value).toFixed(1)).join(" ");
+  const area = line + " L" + x(part.length - 1).toFixed(1) + " " + (h - pad) +
+    " L" + x(0).toFixed(1) + " " + (h - pad) + " Z";
+
+  const marks = [];
+  const count = Math.min(5, part.length);
+  for (let i = 0; i < count; i++) {
+    const at = Math.round((i * (part.length - 1)) / Math.max(1, count - 1));
+    if (!marks.includes(at)) marks.push(at);
+  }
+
+  const buttons = HOLD_PERIODS.map(([key, label, days]) => {
+    const row = jvChange(points, days);
+    const tone = row && row.change > 0 ? "jv-gain" : row && row.change < 0 ? "jv-loss" : "";
+    return '<button type="button" class="jv-eq-period' + (key === pick[0] ? " active" : "") +
+      '" data-hold-period="' + key + '"' + (row ? "" : " disabled") + "><span>" + label +
+      '</span><b class="' + tone + '">' +
+      (row ? smEsc(jvSigned(row.change, "")) : "–") + "</b></button>";
+  }).join("");
+
+  const tone = shown && shown.change > 0 ? " jv-gain" : shown && shown.change < 0 ? " jv-loss" : "";
+  const move = part.length < 2
+    ? '<span class="jv-eq-change">' + pick[1] + " — the line needs two days</span>"
+    : shown
+    ? '<span class="jv-eq-change' + tone + '">' + pick[1] + " " +
+      jvPctText(shown.pct) + " " + smEsc(jvSigned(shown.change, currency)) + "</span>"
+    : '<span class="jv-eq-change">' + pick[1] + " — not that far back yet</span>";
+
+  return '<div class="jv-eq">' +
+    '<span class="jv-eq-label">Egenkapital</span>' +
+    '<span class="jv-eq-value">' + smEsc(jvMoney(last.value, currency)) + "</span>" + move +
+    '<div class="jv-eq-plot">' +
+    '<svg class="jv-spark" viewBox="0 0 ' + w + " " + h + '" preserveAspectRatio="none" ' +
+    'role="img" aria-label="equity over time">' +
+    '<defs><linearGradient id="jvSparkFill" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0%" stop-color="rgba(52,211,153,.30)"/>' +
+    '<stop offset="100%" stop-color="rgba(52,211,153,0)"/></linearGradient></defs>' +
+    '<path d="' + area + '" fill="url(#jvSparkFill)"/>' +
+    '<path d="' + line + '" fill="none" stroke="#34d399" stroke-width="2" ' +
+    'vector-effect="non-scaling-stroke"/>' +
+    '<circle cx="' + x(part.length - 1).toFixed(1) + '" cy="' + y(last.value).toFixed(1) +
+    '" r="3" fill="#34d399"/></svg>' +
+    '<div class="jv-eq-y"><span>' + Math.round(high).toLocaleString("da-DK") +
+    "</span><span>" + Math.round((high + low) / 2).toLocaleString("da-DK") +
+    "</span><span>" + Math.round(low).toLocaleString("da-DK") + "</span></div></div>" +
+    '<div class="jv-eq-dates">' +
+    marks.map((at) => "<span>" + smEsc(jvShortDay(part[at].date)) + "</span>").join("") +
+    '</div><div class="jv-eq-periods">' + buttons + "</div></div>";
+}
+
+// Picking a period redraws from the history the panel already has, so the
+// buttons never wait for the Mac.
+document.addEventListener("click", (ev) => {
+  const button = ev.target && ev.target.closest && ev.target.closest("[data-hold-period]");
+  if (!button || button.disabled) return;
+  HOLD_PERIOD = button.getAttribute("data-hold-period");
+  if (HOLD_LAST) jvHoldings(HOLD_LAST);
+});
+
 function jvHoldings(d) {
+  HOLD_LAST = d;
   if (!d.available) {
     $("jv-hold-state").textContent = "not set up";
     $("jv-hold-state").className = "jv-pill bad";
@@ -2172,7 +2303,7 @@ function jvHoldings(d) {
     ? pos.slice(0, 8).map((p) => jvPosRow(p, exported)).join("")
     : jvEmpty("no open positions")) + jvNoteRow(exported ? d.note : "");
   const chart = $("jv-chart");
-  if (chart) chart.innerHTML = jvChart(d.history);
+  if (chart) chart.innerHTML = jvChart(d.history, d.currency);
 }
 
 async function holdLoad() {
