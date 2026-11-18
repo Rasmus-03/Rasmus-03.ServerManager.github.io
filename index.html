@@ -2079,10 +2079,15 @@ function jvPct(p) {
   return '<span class="jv-' + kind + '">' + (n > 0 ? "+" : "") + n.toFixed(2) + "%</span>";
 }
 
-function jvPosRow(p) {
+// A row from the API carries a value and a day's move; a row from an export
+// carries only what was paid, because the export has no prices in it.
+function jvPosRow(p, exported) {
+  const move = exported || p.day_pct === null || p.day_pct === undefined
+    ? "" : " " + jvPct(p.day_pct);
+  const right = exported ? jvMoney(p.cost, p.currency) : jvMoney(p.value, p.currency);
   return '<div class="jv-event"><span class="jv-when">' + smEsc(String(p.qty)) + "×</span>" +
-    '<span class="jv-what">' + smEsc(p.name) + " " + jvPct(p.day_pct) + "</span>" +
-    '<span class="jv-cal">' + smEsc(jvMoney(p.value, p.currency)) + "</span></div>";
+    '<span class="jv-what">' + smEsc(p.name) + move + "</span>" +
+    '<span class="jv-cal">' + smEsc(right) + "</span></div>";
 }
 
 function jvHoldings(d) {
@@ -2094,18 +2099,26 @@ function jvHoldings(d) {
     return;
   }
   const pos = d.positions || [];
+  // An export has quantities and what was paid, but no market value: saying
+  // that is better than printing a zero that reads like a total loss.
+  const exported = d.source === "csv";
   $("jv-hold-state").textContent = pos.length ? pos.length + " holdings" : "empty";
   $("jv-hold-state").className = "jv-pill violet";
-  $("jv-hold-meta").innerHTML = [
+  $("jv-hold-meta").innerHTML = (exported ? [
+    ["Cost", jvMoney(d.total_cost, d.currency)],
+    ["Positions", String(pos.length)],
+    ["Export", d.updated || "—"],
+    ["Source", "CSV export, no API"],
+  ] : [
     ["Value", jvMoney(d.total_value, d.currency)],
     ["P/L", jvMoney(d.total_profit, d.currency) + " · " + jvPct(d.total_profit_pct)],
     ["Account", d.account || "—"],
     ["Read", d.updated || "—"],
-  ].map(([k, v]) => '<div class="jv-row"><span>' + smEsc(k) + '</span><span class="jv-v">' +
+  ]).map(([k, v]) => '<div class="jv-row"><span>' + smEsc(k) + '</span><span class="jv-v">' +
     (k === "P/L" ? v : smEsc(v)) + "</span></div>").join("");
-  $("jv-hold").innerHTML = pos.length
-    ? pos.slice(0, 8).map(jvPosRow).join("")
-    : jvEmpty("no open positions");
+  $("jv-hold").innerHTML = (pos.length
+    ? pos.slice(0, 8).map((p) => jvPosRow(p, exported)).join("")
+    : jvEmpty("no open positions")) + jvNoteRow(exported ? d.note : "");
 }
 
 async function holdLoad() {
