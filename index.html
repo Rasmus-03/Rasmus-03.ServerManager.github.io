@@ -135,6 +135,24 @@
                  background:#1a1b1e;color:var(--text);font-size:13px}
   .connect .btn{margin-top:16px;width:100%;justify-content:center;padding:9px}
 
+  /* ── jarvis tab ─────────────────────────────────────── */
+  .chat{display:flex;flex-direction:column;gap:10px}
+  .chat-log{display:flex;flex-direction:column;gap:8px;max-height:min(56vh,480px);overflow:auto;
+            padding-right:2px}
+  .bubble{max-width:min(78ch,92%);padding:9px 12px;border-radius:10px;font-size:12.8px;
+          line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;
+          border:1px solid var(--stroke)}
+  .bubble.me{align-self:flex-end;background:var(--panel-blue);border-color:var(--panel-blue);color:#fff}
+  .bubble.jarvis{align-self:flex-start;background:var(--row-bg)}
+  .bubble.err{align-self:flex-start;background:rgba(255,69,58,.08);
+              border-color:rgba(255,69,58,.5);color:var(--red)}
+  .bubble .who{display:block;font-size:10px;letter-spacing:.05em;text-transform:uppercase;
+               opacity:.7;margin-bottom:3px}
+  .chat-compose{display:flex;gap:8px;align-items:flex-end}
+  .chat-compose textarea{flex:1;min-height:40px;max-height:140px;resize:vertical;padding:9px 11px;
+    border-radius:8px;border:1px solid var(--stroke);background:rgba(0,0,0,.25);
+    color:var(--text);font:inherit;font-size:12.8px}
+
   @media (max-width:760px){
     .app{flex-direction:column}
     .sidebar{width:auto;border-right:0;border-bottom:1px solid var(--stroke)}
@@ -245,8 +263,14 @@
         <svg class="icon"><use href="#i-terminal"/></svg>Console
       </button>
             <button class="nav-item" data-tab="server"><svg class="icon"><use href="#i-server"/></svg>Server</button>
-<button class="nav-item" data-tab="network">
+      <button class="nav-item" data-tab="network">
         <svg class="icon"><use href="#i-network"/></svg>Network
+      </button>
+      <button class="nav-item" data-tab="jarvis">
+        <svg class="icon"><use href="#i-bolt"/></svg>Jarvis
+      </button>
+      <button class="nav-item" data-tab="inbox">
+        <svg class="icon"><use href="#i-cube"/></svg>Inbox
       </button>
     </nav>
 
@@ -353,6 +377,7 @@
             <div class="row"><span>Orca app</span><span id="orca-app"><span class="pill idle">…</span></span></div>
             <div class="row"><span>Orca Web</span><span id="orca-web"><span class="pill idle">…</span></span></div>
             <div class="row"><span>Uptime</span><span id="orca-uptime">–</span></div>
+            <div class="row"><span>Tasks today</span><span id="orca-tasks">–</span></div>
             <div class="row"><span>Port</span><span id="orca-port">–</span></div>
           </div>
           <div id="orca-live" style="margin-top:12px">
@@ -522,6 +547,42 @@
         </p>
       </div>
     </section>
+
+    <section class="tab hidden" id="tab-inbox">
+      <div class="card">
+        <div class="card-head"><svg class="icon"><use href="#i-cube"/></svg><h2>Messages</h2>
+          <span class="msg" id="in-msg-state" style="margin-left:auto">loading…</span></div>
+        <div class="rows" id="in-msg-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><svg class="icon"><use href="#i-server"/></svg><h2>Mail</h2>
+          <span class="msg" id="in-mail-state" style="margin-left:auto">loading…</span></div>
+        <div class="rows" id="in-mail-list"></div>
+        <div class="buttons">
+          <button class="btn" id="in-preview" title="Show what would move, change nothing">Preview ads</button>
+          <button class="btn danger" id="in-triage" title="Move advertising from INBOX to Junk">Move ads to Junk</button>
+          <span class="msg" id="in-triage-msg"></span>
+        </div>
+        <p class="msg" style="margin:10px 0 0" id="in-triage-when"></p>
+      </div>
+    </section>
+
+    <section class="tab hidden" id="tab-jarvis">
+      <div class="card">
+        <div class="card-head"><svg class="icon"><use href="#i-bolt"/></svg><h2>Jarvis</h2>
+          <span class="msg" id="jv-state" style="margin-left:auto">checking…</span></div>
+        <div class="chat">
+          <div class="chat-log" id="jv-log"></div>
+          <form class="chat-compose" id="jv-form">
+            <textarea id="jv-input" rows="1"
+              placeholder="Ask Jarvis…  (Enter sends, Shift+Enter adds a line)"></textarea>
+            <button class="btn primary" type="submit" id="jv-send">Send</button>
+            <button class="btn" type="button" id="jv-clear" title="Forget this conversation">Clear</button>
+          </form>
+          <div class="msg" id="jv-note">Answered by OpenJarvis on the Mac.</div>
+        </div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -564,6 +625,8 @@ const TITLES = {
   console: ["Console", "Live output from the Paper server"],
   server: ["Server", "Commands, settings, plugins, backups and updates"],
   network: ["Network", "How this page reaches the Mac"],
+  jarvis: ["Jarvis", "Your OpenJarvis agent, running on the Mac"],
+  inbox: ["Inbox", "Unread messages and mail waiting on the Mac"],
 };
 
 function setTab(tab) {
@@ -577,6 +640,8 @@ function setTab(tab) {
   if (tab === "console") getLog();
   if (tab === "server") smLoadTab();
   if (tab === "dashboard") smLoadOrca();
+  if (tab === "jarvis") jvLoad();
+  if (tab === "inbox") inLoad();
 }
 
 function pill(el, text, cls) {
@@ -1096,6 +1161,23 @@ async function smLoadOrca() {
     if (seq !== ORCA.seq) return; // a newer poll has already answered
     ORCA.seen = Date.now();
     ORCA.answered = true;
+    // How much delegated work Orca actually finished since midnight; the
+    // session list below can only say what it is doing now.
+    const tasks = d.tasks || {};
+    const tasksEl = document.getElementById("orca-tasks");
+    if (tasksEl) {
+      if (tasks.available === false) {
+        tasksEl.textContent = "unknown";
+        tasksEl.title = tasks.note || "Orca's orchestration database could not be read";
+      } else if (tasks.completed_today === null || tasks.completed_today === undefined) {
+        tasksEl.textContent = "–";
+        tasksEl.title = "";
+      } else {
+        tasksEl.textContent = String(tasks.completed_today);
+        tasksEl.title = `${tasks.completed_today} completed today · ` +
+          `${tasks.completed_total} completed in total`;
+      }
+    }
     const s = d.session;
     const note = document.getElementById("orca-live-note");
     if (!d.available || !s) {
@@ -1146,6 +1228,8 @@ async function smLoadOrca() {
     document.getElementById("orca-live-meta").textContent = unknownLine(ORCA);
     if (!ORCA.answered) {
       document.getElementById("orca-live-title").textContent = "Unknown";
+      const tasksEl = document.getElementById("orca-tasks");
+      if (tasksEl) { tasksEl.textContent = "–"; tasksEl.title = ""; }
       list.innerHTML = '<div class="item dim">no answer from the Mac yet</div>';
     }
   }
@@ -1607,6 +1691,201 @@ else { showConnect(true); }
 setInterval(getStatus, 5000);
 setInterval(() => { if (!document.hidden && TAB === "dashboard" && SESSION) smLoadOrca(); }, 5000);
 setInterval(() => { if (!document.hidden && TAB === "console") getLog(); }, 4000);
+
+/* ── jarvis tab ─────────────────────────────────────────────────────────── */
+// The browser talks to this Mac's own API and nothing else: the tunnel, the
+// session and the agent's key stay in one place. OpenJarvis is never reached
+// cross-origin, so the Pages copy needs no second URL and no CORS change.
+const JV = { messages: [], busy: false };
+
+function jvBubble(who, text, cls) {
+  const log = $("jv-log");
+  const div = document.createElement("div");
+  div.className = "bubble " + cls;
+  const label = document.createElement("span");
+  label.className = "who";
+  label.textContent = who;
+  div.appendChild(label);
+  div.appendChild(document.createTextNode(text));
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  return div;
+}
+
+async function jvLoad() {
+  const state = $("jv-state");
+  state.className = "msg";
+  state.textContent = "checking…";
+  try {
+    const d = await smGet("/api/jarvis/status");
+    if (d.reachable) {
+      state.textContent = d.model ? "ready · " + d.model : "ready";
+    } else {
+      state.className = "msg err";
+      state.textContent = d.note || "OpenJarvis is not answering";
+    }
+  } catch (e) {
+    state.className = "msg err";
+    state.textContent = smWhy(e);
+  }
+}
+
+async function jvSend() {
+  if (JV.busy) return;
+  const input = $("jv-input");
+  const text = input.value.trim();
+  if (!text) return;
+  JV.busy = true;
+  $("jv-send").disabled = true;
+  $("jv-note").className = "msg";
+  $("jv-note").textContent = "Jarvis is thinking — a local model can take a while…";
+  input.value = "";
+  jvBubble("you", text, "me");
+  JV.messages.push({ role: "user", content: text });
+  const pending = jvBubble("jarvis", "…", "jarvis");
+  try {
+    const d = await smPost("/api/jarvis/chat", { messages: JV.messages });
+    pending.lastChild.textContent = d.reply;
+    JV.messages.push({ role: "assistant", content: d.reply });
+    const usage = d.usage || {};
+    $("jv-note").textContent = (d.model || "OpenJarvis") +
+      (usage.completion_tokens ? " · " + usage.completion_tokens + " tokens" : "");
+  } catch (e) {
+    // The question that failed stays out of the history, so asking again is
+    // one click rather than a retype.
+    JV.messages.pop();
+    pending.className = "bubble err";
+    pending.lastChild.textContent = smWhy(e);
+  } finally {
+    JV.busy = false;
+    $("jv-send").disabled = false;
+    $("jv-input").focus();
+  }
+}
+
+$("jv-form").addEventListener("submit", (ev) => { ev.preventDefault(); jvSend(); });
+$("jv-input").addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); jvSend(); }
+});
+$("jv-clear").addEventListener("click", () => {
+  JV.messages = [];
+  $("jv-log").innerHTML = "";
+  $("jv-note").className = "msg";
+  $("jv-note").textContent = "Conversation cleared.";
+});
+
+/* ── inbox tab ──────────────────────────────────────────────────────────── */
+// Two read-only lists and one button. A source that cannot be read says why in
+// its own words, because "no messages" and "no permission" look identical
+// otherwise.
+function inNote(id, text, isErr) {
+  const el = $(id);
+  el.className = "msg" + (isErr ? " err" : "");
+  el.textContent = text || "";
+}
+
+function inEmpty(id, text) {
+  $(id).innerHTML = '<div class="row"><span class="dim">' + smEsc(text) + "</span></div>";
+}
+
+function inMessageRow(item) {
+  const tag = item.unread ? '<span class="pill blue">new</span> ' : "";
+  const out = item.outgoing ? '<span class="pill idle">sent</span> ' : "";
+  return '<div class="row"><span>' + tag + out + smEsc(item.who) + "</span>" +
+    '<span class="dim">' + smEsc(item.text) + " · " + smEsc(item.at) + "</span></div>";
+}
+
+function inMailRow(item) {
+  return '<div class="row"><span>' + (item.flagged
+      ? '<span class="pill blue">flagged</span> ' : "") + smEsc(item.subject || "(no subject)") +
+    "</span>" +
+    '<span class="dim">' + smEsc(item.sender) + " · " + smEsc(item.at) + "</span></div>";
+}
+
+async function inLoad() {
+  inNote("in-msg-state", "loading…");
+  inNote("in-mail-state", "loading…");
+  try {
+    const d = await smGet("/api/inbox");
+    const m = d.messages || {};
+    if (m.available) {
+      const n = m.unread || 0;
+      inNote("in-msg-state", n ? n + (n === 1 ? " unread" : " unread") : "nothing unread");
+      const items = m.items || [];
+      $("in-msg-list").innerHTML = items.length
+        ? items.map(inMessageRow).join("")
+        : "";
+      if (!items.length) inEmpty("in-msg-list", "the database holds no messages yet");
+    } else {
+      inNote("in-msg-state", "not readable", true);
+      inEmpty("in-msg-list", m.note || "unavailable");
+    }
+
+    const mail = d.mail || {};
+    if (mail.available) {
+      const accounts = mail.accounts || [];
+      const unread = accounts.reduce((sum, a) => sum + (a.unread || 0), 0);
+      inNote("in-mail-state", unread ? unread + " unread" : "nothing unread");
+      const items = mail.items || [];
+      const head = accounts.map((a) => smEsc(a.name) + " · " + a.unread + " unread").join("  |  ");
+      $("in-mail-list").innerHTML =
+        (head ? '<div class="row"><span>Accounts</span><span class="dim">' + head + "</span></div>" : "") +
+        items.map(inMailRow).join("") +
+        // A slow or half-read mailbox says so under its own list, because the
+        // counts above can be right while the rows are missing.
+        (mail.note ? '<div class="row"><span>Note</span><span class="dim">' +
+          smEsc(mail.note) + "</span></div>" : "");
+      if (!head && !items.length && !mail.note) inEmpty("in-mail-list", "no accounts answered");
+    } else {
+      inNote("in-mail-state", "not readable", true);
+      inEmpty("in-mail-list", mail.note || "unavailable");
+    }
+
+    const t = d.triage || {};
+    $("in-triage-when").textContent = t.at
+      ? "Last sort " + t.at + (t.moved ? " · moved " + t.moved.length : "") +
+        (d.triage_minutes ? " · runs every " + d.triage_minutes + " min" : "")
+      : (d.triage_minutes ? "Advertising is sorted automatically every " +
+         d.triage_minutes + " min." : "");
+  } catch (e) {
+    inNote("in-msg-state", smWhy(e), true);
+    inNote("in-mail-state", smWhy(e), true);
+  }
+}
+
+async function inTriage(dry) {
+  const out = $("in-triage-msg");
+  out.className = "msg";
+  out.textContent = dry ? "looking for advertising…" : "moving advertising to Junk…";
+  $("in-triage").disabled = true;
+  $("in-preview").disabled = true;
+  try {
+    const d = await smPost("/api/mail/triage", { dry_run: dry });
+    const list = d.candidates || [];
+    if (!list.length) {
+      out.textContent = "nothing in the inbox looked like advertising";
+    } else if (dry) {
+      out.textContent = list.length + " would move: " +
+        list.slice(0, 3).map((i) => i.subject || i.sender).join(" · ") +
+        (list.length > 3 ? " …" : "");
+    } else {
+      const moved = (d.moved || []).length;
+      out.textContent = moved + " moved to Junk" + (d.note ? " · " + d.note : "");
+      if (d.note) out.className = "msg err";
+    }
+    inLoad();
+  } catch (e) {
+    out.className = "msg err";
+    out.textContent = smWhyAction(e);
+  } finally {
+    $("in-triage").disabled = false;
+    $("in-preview").disabled = false;
+  }
+}
+
+$("in-preview").addEventListener("click", () => inTriage(true));
+$("in-triage").addEventListener("click", () => inTriage(false));
+setInterval(() => { if (!document.hidden && TAB === "inbox") inLoad(); }, 60000);
 </script>
 </body>
 </html>
