@@ -2226,14 +2226,36 @@ function jvFlows(plan, from, to) {
   return { amount: total, count: count };
 }
 
+// The return a broker reports is a chain of daily returns, and on a day money
+// was paid in, that money is taken out of the day's value first — it was the
+// owner's saving, not the market. Chaining the days gives the time-weighted
+// return; subtracting the whole deposit at the end is only an approximation of
+// it, which is close when the deposit is small and the period short.
+function jvTwr(points, base, plan) {
+  let chain = 1, flows = 0;
+  for (let i = points.indexOf(base) + 1; i < points.length; i++) {
+    const before = points[i - 1], now = points[i];
+    if (!(before.value > 0)) continue;
+    const paid = jvFlows(plan, before.date, now.date);
+    flows += paid.amount;
+    chain *= (now.value - paid.amount) / before.value;
+  }
+  return { chain: chain, flows: flows, pct: (chain - 1) * 100 };
+}
+
 function jvChange(points, days, plan) {
   const base = jvBase(points, days);
   if (!base) return null;
   const last = points[points.length - 1];
   const flows = jvFlows(plan, base.date, last.date);
-  const change = last.value - base.value - flows.amount;
-  return { change: change, pct: base.value ? (change / base.value) * 100 : null,
-    flows: flows };
+  const twr = jvTwr(points, base, plan);
+  const flat = last.value - base.value - flows.amount;
+  return {
+    change: base.value * (twr.chain - 1),
+    pct: twr.pct,
+    flows: flows,
+    simple: { change: flat, pct: base.value ? (flat / base.value) * 100 : null },
+  };
 }
 
 function jvSigned(amount, currency) {
@@ -2298,7 +2320,9 @@ function jvChart(history, currency, plan) {
   const move = part.length < 2
     ? '<span class="jv-eq-change">' + label + " — the line needs two days</span>"
     : shown
-    ? '<span class="jv-eq-change' + tone + '">' + label + " " +
+    ? '<span class="jv-eq-change' + tone + '" title="kæde af daglige afkast; ' +
+      'simpelt ville give ' + smEsc(jvPctText(shown.simple.pct)) + " " +
+      smEsc(jvSigned(shown.simple.change, currency)) + '">' + label + " " +
       jvPctText(shown.pct) + " " + smEsc(jvSigned(shown.change, currency)) +
       (shown.flows.count ? '<span class="jv-flow"> · uden ' +
         shown.flows.amount.toLocaleString("da-DK") + " kr indskud</span>" : "") + "</span>"
