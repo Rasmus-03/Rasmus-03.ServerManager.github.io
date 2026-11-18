@@ -2149,6 +2149,17 @@ function jvShortDay(iso) {
     : String(iso);
 }
 
+// The newest point can be days old — a weekend, or a fund that reports late —
+// so the shortest period says how far back it really reaches instead of
+// claiming a day it does not have.
+function jvSpanLabel(period, base, last) {
+  if (!base) return period[1];
+  const days = Math.round((jvDay(last.date) - jvDay(base.date)) / 86400000);
+  if (days <= 0) return period[1] + " — ingen tidligere dag";
+  if (period[0] !== "1d" || days === 1) return period[1];
+  return "Siden " + jvShortDay(base.date);
+}
+
 // Where a period starts: the newest point that is not after the start, or null
 // when the history does not reach that far back.
 function jvBase(points, days) {
@@ -2220,22 +2231,26 @@ function jvChart(history, currency) {
     if (!marks.includes(at)) marks.push(at);
   }
 
-  const buttons = HOLD_PERIODS.map(([key, label, days]) => {
+  const buttons = HOLD_PERIODS.map((period) => {
+    const [key, label, days] = period;
     const row = jvChange(points, days);
+    const from = row ? jvBase(points, days) : null;
     const tone = row && row.change > 0 ? "jv-gain" : row && row.change < 0 ? "jv-loss" : "";
     return '<button type="button" class="jv-eq-period' + (key === pick[0] ? " active" : "") +
-      '" data-hold-period="' + key + '"' + (row ? "" : " disabled") + "><span>" + label +
+      '" data-hold-period="' + key + '"' + (row ? "" : " disabled") + "><span>" +
+      smEsc(from ? jvSpanLabel(period, from, last) : label) +
       '</span><b class="' + tone + '">' +
       (row ? smEsc(jvSigned(row.change, "")) : "–") + "</b></button>";
   }).join("");
 
   const tone = shown && shown.change > 0 ? " jv-gain" : shown && shown.change < 0 ? " jv-loss" : "";
+  const label = smEsc(base ? jvSpanLabel(pick, base, last) : pick[1]);
   const move = part.length < 2
-    ? '<span class="jv-eq-change">' + pick[1] + " — the line needs two days</span>"
+    ? '<span class="jv-eq-change">' + label + " — the line needs two days</span>"
     : shown
-    ? '<span class="jv-eq-change' + tone + '">' + pick[1] + " " +
+    ? '<span class="jv-eq-change' + tone + '">' + label + " " +
       jvPctText(shown.pct) + " " + smEsc(jvSigned(shown.change, currency)) + "</span>"
-    : '<span class="jv-eq-change">' + pick[1] + " — not that far back yet</span>";
+    : '<span class="jv-eq-change">' + label + " — not that far back yet</span>";
 
   return '<div class="jv-eq">' +
     '<span class="jv-eq-label">Egenkapital</span>' +
