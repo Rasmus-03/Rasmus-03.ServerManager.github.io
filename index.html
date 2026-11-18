@@ -2286,7 +2286,8 @@ function jvHoldings(d) {
   $("jv-hold-state").textContent = pos.length ? pos.length + " holdings" : "empty";
   $("jv-hold-state").className = "jv-pill violet";
   $("jv-hold-meta").innerHTML = (exported ? [
-    ["Cost", jvMoney(d.total_cost, d.currency)],
+    ["Cost", d.total_cost_dkk != null ? jvMoney(d.total_cost_dkk, "DKK")
+      : jvMoney(d.total_cost, d.currency)],
     ...(d.deposits ? [["Deposited", jvMoney(d.deposits.net, d.deposits.currency) +
       (d.deposits.count ? " · " + d.deposits.count + " in" : "")]] : []),
     ["Positions", String(pos.length)],
