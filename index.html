@@ -40,6 +40,7 @@
   .server-head{display:flex;align-items:center;gap:7px;margin-bottom:8px}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex:none}
   .dot.up{background:var(--green)}
+  .dot.unknown{background:var(--orange, #ff9f0a)}
   .server-head .state{font-size:11px;color:var(--secondary)}
   .server-head .kind{margin-left:auto;font-size:11px;color:var(--panel-blue);filter:brightness(1.6)}
   .server-name{font-size:14px;font-weight:600;margin-bottom:8px}
@@ -89,6 +90,7 @@
   .pill{display:inline-block;font-size:11px;font-weight:600;padding:5px 9px;border-radius:8px}
   .pill.up{color:var(--green);background:rgba(48,209,88,.12)}
   .pill.down{color:var(--red);background:rgba(255,69,58,.12)}
+  .pill.unknown{color:var(--orange, #ff9f0a);background:rgba(255,159,10,.12)}
   .pill.idle{color:var(--secondary);background:rgba(235,235,245,.1)}
   .pill.blue{color:var(--blue);background:rgba(100,181,255,.12)}
   .address{display:flex;align-items:center;gap:12px;padding:10px;background:var(--row-bg);
@@ -225,13 +227,13 @@
         <span class="kind">Minecraft</span>
       </div>
       <div class="server-name">BlackBox Minecraft</div>
-      <div class="info-line"><span>Software</span><span id="side-software">–</span></div>
+      <div class="info-line"><span>Software</span><span id="side-software">unknown</span></div>
       <div class="info-line"><span>Path</span><span class="mono" id="side-path" title="/Volumes/BlackBox/minecraft-server">/Volumes/BlackBox/…</span></div>
-      <div class="info-line"><span>Port</span><span id="side-port">–</span></div>
-      <div class="info-line"><span>Server disk</span><span id="side-disk">–</span></div>
-      <div class="info-line"><span>Mac disk</span><span id="side-disk-mac">–</span></div>
-      <div class="info-line"><span>CPU</span><span id="side-cpu">–</span></div>
-      <div class="info-line"><span>RAM</span><span id="side-ram">–</span></div>
+      <div class="info-line"><span>Port</span><span id="side-port">unknown</span></div>
+      <div class="info-line"><span>Server disk</span><span id="side-disk">unknown</span></div>
+      <div class="info-line"><span>Mac disk</span><span id="side-disk-mac">unknown</span></div>
+      <div class="info-line"><span>CPU</span><span id="side-cpu">unknown</span></div>
+      <div class="info-line"><span>RAM</span><span id="side-ram">unknown</span></div>
     </div>
 
     <nav class="nav">
@@ -270,6 +272,11 @@
       </div>
       <div class="machine-restart-box">
         <div class="restart-row">
+          <!-- Shown only while the polls fail: a dead page cannot retry itself. -->
+          <button class="btn" id="reload-page" style="display:none"
+                  title="Fetch the page and the status again">
+            <svg class="icon"><use href="#i-restart"/></svg>Reload page
+          </button>
           <button class="btn" id="orca-restart" title="Quit and reopen the Orca app">
             <svg class="icon"><use href="#i-restart"/></svg>Restart Orca
           </button>
@@ -287,23 +294,23 @@
         <div class="card-head"><svg class="icon"><use href="#i-gauge"/></svg><h2>Resource Overview</h2></div>
         <div class="metrics">
           <div class="metric">
-            <svg class="icon" id="m-status-icon" style="color:var(--red)"><use href="#i-power"/></svg>
-            <div class="value" id="m-status">Offline</div>
+            <svg class="icon" id="m-status-icon" style="color:var(--orange, #ff9f0a)"><use href="#i-power"/></svg>
+            <div class="value" id="m-status">unknown</div>
             <div class="label">Status</div>
           </div>
           <div class="metric">
             <svg class="icon" style="color:var(--green)"><use href="#i-cube"/></svg>
-            <div class="value" id="m-players">–</div>
+            <div class="value" id="m-players">unknown</div>
             <div class="label">Players</div>
           </div>
           <div class="metric">
             <svg class="icon" style="color:var(--orange)"><use href="#i-restart"/></svg>
-            <div class="value" id="m-uptime">–</div>
+            <div class="value" id="m-uptime">unknown</div>
             <div class="label">Uptime</div>
           </div>
           <div class="metric">
             <svg class="icon" style="color:var(--blue)"><use href="#i-network"/></svg>
-            <div class="value" id="m-port">–</div>
+            <div class="value" id="m-port">unknown</div>
             <div class="label">Port</div>
           </div>
         </div>
@@ -314,10 +321,10 @@
           <div class="card-head"><svg class="icon"><use href="#i-server"/></svg><h2>Minecraft — Paper</h2></div>
           <div class="rows">
             <div class="row"><span>Service</span><span id="rows-service"><span class="pill idle">…</span></span></div>
-            <div class="row"><span>Version</span><span id="rows-version">–</span></div>
-            <div class="row"><span>Players</span><span id="rows-players">–</span></div>
-            <div class="row"><span>Uptime</span><span id="rows-uptime">–</span></div>
-            <div class="row"><span>Port</span><span id="rows-port">–</span></div>
+            <div class="row"><span>Version</span><span id="rows-version">unknown</span></div>
+            <div class="row"><span>Players</span><span id="rows-players">unknown</span></div>
+            <div class="row"><span>Uptime</span><span id="rows-uptime">unknown</span></div>
+            <div class="row"><span>Port</span><span id="rows-port">unknown</span></div>
           </div>
           <div class="address">
             <div>
@@ -608,6 +615,49 @@ $("connect-form").addEventListener("submit", async (e) => {
 
 $("disconnect").addEventListener("click", () => disconnect());
 
+let lastSeen = 0;      // when the last /api/status answer arrived
+let hasAnswer = false; // whether one ever did
+let orcaSeen = 0;      // and the same for the Orca activity card
+let orcaAnswered = false;
+
+// One wording for both cards: an answer that never arrived is not a stopped
+// server, so say what is unknown and when the values on screen were true.
+function unknownLine(seen, answered) {
+  if (!answered) return "Unknown · no answer yet";
+  // Fixed 24-hour form: the browser's locale would give "08.13" or "8:13 AM".
+  const d = new Date(seen);
+  return "Unknown · last seen " + String(d.getHours()).padStart(2, "0") +
+    ":" + String(d.getMinutes()).padStart(2, "0");
+}
+
+// Keep the last values: they are still the best information there is, and the
+// line above says how old they are.
+function markUnknown() {
+  $("side-dot").className = "dot unknown";
+  $("side-state").textContent = unknownLine(lastSeen, hasAnswer);
+  $("m-status").textContent = "Unknown";
+  $("m-status-icon").style.color = "var(--orange, #ff9f0a)";
+  pill($("rows-service"), "Unknown", "unknown");
+  // The Orca pills come from the same status answer, so they are unknown too.
+  pill($("orca-app"), "Unknown", "unknown");
+  pill($("orca-web"), "Unknown", "unknown");
+  pill($("net-orca"), "Unknown", "unknown");
+  $("page-sub").textContent = "Server Manager · no answer from the Mac";
+  $("reload-page").style.display = "";
+}
+
+$("reload-page").addEventListener("click", () => location.reload());
+
+// A hidden or frozen tab (a slept Mac, a suspended browser) comes back with
+// numbers that were true minutes ago; say so before the next poll answers.
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  if (!SESSION) return;
+  if (hasAnswer && Date.now() - lastSeen > 15000) markUnknown();
+  getStatus();
+  if (TAB === "dashboard") smLoadOrca();
+});
+
 async function getStatus() {
   if (!API || !SESSION) return;
   try {
@@ -617,6 +667,10 @@ async function getStatus() {
     const running = mc.launchd_state === "running" || mc.port_open;
     const players = mc.players ? `${mc.players.online} / ${mc.players.max}` : null;
     const version = mc.players ? mc.players.version : null;
+
+    lastSeen = Date.now();
+    hasAnswer = true;
+    $("reload-page").style.display = "none";
 
     $("side-dot").className = "dot" + (running ? " up" : "");
     $("side-state").textContent = running ? "Online" : "Offline";
@@ -723,11 +777,10 @@ async function getStatus() {
         ramLine.style.color = hot ? "var(--red)" : "";
       }
     }
-  } catch (e) {
-    if (String(e.message) !== "unauthorized") {
-      $("page-sub").textContent = "Server Manager · connection lost, retrying";
+      } catch (e) {
+      if (String(e.message) === "unauthorized") return;
+      markUnknown();
     }
-  }
 }
 
 async function getLog() {
@@ -900,6 +953,8 @@ async function smLoadOrca() {
   if (!list) return;
   try {
     const d = await smGet("/api/orca/activity");
+    orcaSeen = Date.now();
+    orcaAnswered = true;
     const s = d.session;
     const note = document.getElementById("orca-live-note");
     if (!d.available || !s) {
@@ -930,7 +985,13 @@ async function smLoadOrca() {
       '<span class="dim" style="white-space:nowrap">' + smEsc(smAgo(m.age_seconds)) + "</span></div>"
     )).join("") || '<div class="item dim">No messages logged yet</div>';
   } catch (e) {
-    list.innerHTML = '<div class="item dim">' + smEsc(e.message || "could not read Orca") + "</div>";
+    // Same language as the status card: a missing answer is not a stopped
+    // Orca, so keep the last sessions on screen and say when they were true.
+    document.getElementById("orca-live-meta").textContent = unknownLine(orcaSeen, orcaAnswered);
+    if (!orcaAnswered) {
+      document.getElementById("orca-live-title").textContent = "Unknown";
+      list.innerHTML = '<div class="item dim">no answer from the Mac yet</div>';
+    }
   }
 }
 
