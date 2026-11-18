@@ -12,10 +12,10 @@
      panelBlue, NSColor dark controlBackground cards, separator strokes. */
   :root{
     --panel-blue:#0d5cb8;            /* Color.panelBlue */
-    --panel-bg:#1e1f22;              /* windowBackgroundColor (dark) */
-    --card-bg:#26272b;               /* controlBackgroundColor (dark) */
-    --row-bg:rgba(38,39,43,.7);      /* rowBackground */
-    --stroke:rgba(255,255,255,.11);   /* cardStroke */
+    --panel-bg:#070b11;              /* console navy behind every card */
+    --card-bg:#0e141d;               /* card fill */
+    --row-bg:rgba(148,163,184,.07);   /* inset row */
+    --stroke:rgba(148,163,184,.14);   /* cardStroke */
     --text:#f2f2f7;
     --secondary:rgba(235,235,245,.6);
     --green:#30d158;
@@ -26,7 +26,9 @@
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0;background:var(--panel-bg);color:var(--text);
+    margin:0;color:var(--text);
+    background:radial-gradient(1100px 520px at 12% -12%,#102132 0%,#070b11 58%) no-repeat,
+               var(--panel-bg);
     font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
     -webkit-font-smoothing:antialiased;
   }
@@ -36,24 +38,25 @@
 
   /* ── sidebar ─────────────────────────────────────────── */
   .sidebar{
-    width:250px;flex:none;background:var(--card-bg);border-right:1px solid var(--stroke);
-    padding:16px;display:flex;flex-direction:column;gap:12px
+    width:258px;flex:none;border-right:1px solid var(--stroke);
+    background:linear-gradient(180deg,#0b1119,#080d13);
+    padding:18px 16px;display:flex;flex-direction:column;gap:14px
   }
-  .server-card{background:var(--row-bg);border:1px solid var(--stroke);border-radius:8px;padding:12px}
+  .server-card{background:var(--row-bg);border:1px solid var(--stroke);border-radius:12px;padding:13px}
   .server-head{display:flex;align-items:center;gap:7px;margin-bottom:8px}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex:none}
   .dot.up{background:var(--green)}
   .dot.unknown{background:var(--orange, #ff9f0a)}
   .server-head .state{font-size:11px;color:var(--secondary)}
   .server-head .kind{margin-left:auto;font-size:11px;color:var(--panel-blue);filter:brightness(1.6)}
-  .server-name{font-size:14px;font-weight:600;margin-bottom:8px}
+  .server-name{font-size:15px;font-weight:600;margin-bottom:9px;letter-spacing:-.01em}
   .info-line{display:flex;gap:10px;justify-content:space-between;font-size:11px;padding:2px 0}
   .info-line > span:first-child{color:var(--secondary);flex:none}
   .info-line span:last-child{text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .info-line .share{color:var(--secondary);font-size:10px;margin-left:6px}
   .nav{display:flex;flex-direction:column;gap:4px}
   .nav-item{
-    display:flex;align-items:center;gap:10px;padding:9px 12px;border:0;border-radius:8px;
+    display:flex;align-items:center;gap:10px;padding:10px 12px;border:0;border-radius:9px;
     background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer;width:100%
   }
   .nav-item:hover{background:rgba(255,255,255,.05)}
@@ -61,25 +64,28 @@
   .sidebar-spacer{flex:1}
 
   /* ── cards / panels ──────────────────────────────────── */
-  .card{background:var(--card-bg);border:1px solid var(--stroke);border-radius:8px;padding:14px}
+  .card{background:linear-gradient(180deg,rgba(16,24,34,.96),rgba(11,17,24,.96));
+        border:1px solid var(--stroke);border-radius:12px;padding:16px}
   .card-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
-  .card-head h2{font-size:13px;font-weight:600;margin:0}
-  .card-head .icon{color:var(--panel-blue);filter:brightness(1.7)}
-  .main{flex:1;min-width:0;padding:24px;display:flex;flex-direction:column;gap:18px;overflow:auto}
+  .card-head h2{font-size:14px;font-weight:600;margin:0;letter-spacing:-.01em}
+  .card-head .icon{color:var(--blue);filter:none;width:16px;height:16px;
+                   padding:6px;box-sizing:content-box;border-radius:9px;
+                   background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.22)}
+  .main{flex:1;min-width:0;padding:26px 28px;display:flex;flex-direction:column;gap:18px;overflow:auto}
   .mod-search{display:flex;gap:8px;margin:0 0 10px}
   .page-title{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
   .machine-restart-box{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
   .restart-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
   .restart-row .btn{white-space:nowrap}
-  .page-title h1{font-size:26px;line-height:1.15;margin:0 0 4px;font-weight:700;letter-spacing:-.01em}
-  .page-title p{margin:0;color:var(--secondary);font-size:12.5px}
+  .page-title h1{font-size:30px;line-height:1.1;margin:0 0 5px;font-weight:700;letter-spacing:-.02em}
+  .page-title p{margin:0;color:var(--secondary);font-size:12.5px;letter-spacing:.01em}
   .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
   .stack{display:flex;flex-direction:column;gap:18px}
   .tab.hidden{display:none}
 
   /* ── metric tiles ────────────────────────────────────── */
   .metrics{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
-  .metric{background:var(--card-bg);border:1px solid var(--stroke);border-radius:8px;padding:14px}
+  .metric{background:var(--row-bg);border:1px solid var(--stroke);border-radius:12px;padding:14px}
   .metric .icon{margin-bottom:12px}
   .metric .value{font-size:20px;font-weight:600;line-height:1.2;
                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -156,122 +162,128 @@
     border-radius:8px;border:1px solid var(--stroke);background:rgba(0,0,0,.25);
     color:var(--text);font:inherit;font-size:12.8px}
 
-  /* ── jarvis hud ──────────────────────────────────────────
-     A Stark-style telemetry skin, scoped to #tab-jarvis so the rest of the
-     dashboard keeps its native macOS look. Every number on it is real: the
-     rings and boxes are filled from /api/briefing, and nothing is simulated. */
-  .jv{--jv-panel:#0d131a;--jv-card:#111922;--jv-nested:#090e14;--jv-line:#1c2b3a;
-      --jv-cyan:#00f0ff;--jv-amber:#f59e0b;--jv-emerald:#10b981;--jv-crimson:#ef4444;
+  /* ── dashboard console ───────────────────────────────────
+     Dark cards, one tinted tile per section and a ring gauge per metric. Every
+     number on it is real: the rings and tiles are filled from /api/briefing. */
+  .jv{--jv-line:rgba(148,163,184,.14);--jv-card:#0e1722;--jv-nested:rgba(148,163,184,.05);
+      --jv-cyan:#38bdf8;--jv-amber:#f59e0b;--jv-emerald:#22c55e;--jv-crimson:#ef4444;
       --jv-violet:#a78bfa;
       display:flex;flex-direction:column;gap:14px;font-variant-numeric:tabular-nums;
       font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace}
-  .jv-frame{position:relative;background:rgba(13,19,26,.94);border:1px solid var(--jv-line);
-            box-shadow:inset 0 0 24px rgba(0,240,255,.02)}
-  .jv-frame::before,.jv-frame::after{content:"";position:absolute;width:10px;height:10px;pointer-events:none}
-  .jv-frame::before{top:-1px;left:-1px;border-top:2px solid var(--jv-cyan);border-left:2px solid var(--jv-cyan)}
-  .jv-frame::after{bottom:-1px;right:-1px;border-bottom:2px solid var(--jv-cyan);border-right:2px solid var(--jv-cyan)}
+  .jv-frame{position:relative;border:1px solid var(--jv-line);border-radius:12px;
+            background:linear-gradient(180deg,rgba(15,24,36,.97),rgba(10,16,24,.97));
+            box-shadow:0 10px 30px rgba(0,0,0,.28)}
 
-  .jv-head{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:6px;
-           overflow:hidden;background:linear-gradient(180deg,#0b1118,#0a0f15)}
-  .jv-scan{position:absolute;top:0;left:0;height:1px;width:33%;
-           background:linear-gradient(90deg,transparent,var(--jv-cyan),transparent);
-           animation:jvScan 4.5s ease-in-out infinite}
-  @keyframes jvScan{0%{transform:translateX(-100%);opacity:0}40%{opacity:.7}100%{transform:translateX(300%);opacity:0}}
-  .jv-reactor{width:42px;height:42px;display:block}
-  .jv-spin{transform-origin:center;animation:jvSpin 14s linear infinite}
-  .jv-spin-rev{transform-origin:center;animation:jvSpin 9s linear infinite reverse}
-  @keyframes jvSpin{to{transform:rotate(360deg)}}
+  .jv-head{display:flex;align-items:center;gap:14px;padding:16px 18px;
+           background:radial-gradient(700px 150px at 0% 0%,rgba(56,189,248,.07),transparent 62%),
+                      linear-gradient(180deg,rgba(15,24,36,.97),rgba(10,16,24,.97))}
+  .jv-head-main{flex:1;min-width:0}
   .jv-head-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .jv-title{margin:0;font-family:Rajdhani,system-ui,sans-serif;font-size:17px;font-weight:700;
-            letter-spacing:.14em;text-transform:uppercase;color:#fff}
-  .jv-title span{color:var(--jv-cyan)}
-  .jv-badge{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:3px;
-            font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--jv-cyan);
-            background:rgba(0,240,255,.1);border:1px solid rgba(0,240,255,.32)}
-  .jv-badge.bad{color:var(--jv-amber);background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.4)}
+  .jv-title{margin:0;font-family:Rajdhani,system-ui,sans-serif;font-size:19px;font-weight:700;
+            letter-spacing:.1em;text-transform:uppercase;color:#f8fafc}
+  .jv-title span{color:#3b4a5c;margin:0 2px}
+  .jv-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;
+            font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--jv-emerald);
+            background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35)}
+  .jv-badge.bad{color:var(--jv-amber);background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.4)}
   .jv-pulse{width:6px;height:6px;border-radius:50%;background:currentColor;animation:jvPulse 1.8s ease-in-out infinite}
   @keyframes jvPulse{50%{opacity:.2}}
-  .jv-chips{display:flex;flex-wrap:wrap;gap:14px;margin-top:5px;font-size:11px;color:#8fa3b8}
-  .jv-chips strong{color:#dbe7f3;font-weight:500}
+  .jv-chips{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-top:8px;
+            font-size:11px;color:#71839a}
+  .jv-chips span{display:inline-flex;align-items:center;gap:5px}
+  .jv-chips span + span::before{content:"·";color:#334155;margin-right:3px}
+  .jv-chips strong{color:#cbd5e1;font-weight:500}
 
-  .jv-kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
-  .jv-kpi{display:flex;align-items:center;justify-content:space-between;gap:10px;
-          background:var(--jv-card);border:1px solid var(--jv-line);border-radius:4px;padding:12px 14px}
-  .jv-kpi.cyan{border-color:rgba(0,240,255,.45);box-shadow:0 0 14px rgba(0,240,255,.1)}
-  .jv-kpi.amber{border-color:rgba(245,158,11,.4)}
-  .jv-kpi.emerald{border-color:rgba(16,185,129,.4)}
-  .jv-kpi.violet{border-color:rgba(167,139,250,.35)}
-  .jv-kpi-label{display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:.12em;
-                text-transform:uppercase;color:#7f95ac;margin-bottom:8px}
-  .jv-idx{color:var(--jv-cyan);font-weight:600}
-  .jv-kpi.amber .jv-idx{color:var(--jv-amber)}
-  .jv-kpi.emerald .jv-idx{color:var(--jv-emerald)}
-  .jv-kpi.violet .jv-idx{color:var(--jv-violet)}
-  .jv-kpi-value{font-size:22px;font-weight:700;color:#fff;line-height:1;white-space:nowrap;
+  /* one tinted square per section; the same tile carries a panel header */
+  .jv-tile{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;
+           flex:none;border-radius:10px;border:1px solid;color:var(--jv-cyan);
+           background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.28)}
+  .jv-tile .icon{width:17px;height:17px}
+  .jv-tile.amber{color:var(--jv-amber);background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.28)}
+  .jv-tile.emerald{color:var(--jv-emerald);background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.28)}
+  .jv-tile.violet{color:var(--jv-violet);background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.28)}
+
+  .jv-kpis{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  .jv-kpi{display:flex;align-items:center;gap:14px;background:var(--jv-card);
+          border:1px solid var(--jv-line);border-radius:12px;padding:16px 18px;
+          box-shadow:0 10px 26px rgba(0,0,0,.22)}
+  .jv-kpi.cyan{border-color:rgba(56,189,248,.38);box-shadow:0 12px 28px rgba(56,189,248,.08)}
+  .jv-kpi.amber{border-color:rgba(245,158,11,.34);box-shadow:0 12px 28px rgba(245,158,11,.06)}
+  .jv-kpi.emerald{border-color:rgba(34,197,94,.32);box-shadow:0 12px 28px rgba(34,197,94,.06)}
+  .jv-kpi.violet{border-color:rgba(167,139,250,.32);box-shadow:0 12px 28px rgba(167,139,250,.06)}
+  .jv-kpi-body{flex:1;min-width:0}
+  .jv-kpi-value{font-size:26px;font-weight:700;color:#f8fafc;line-height:1.05;white-space:nowrap;
                 overflow:hidden;text-overflow:ellipsis}
-  .jv-kpi-sub{font-size:11px;font-weight:600;color:#6b7f95;margin-left:4px}
-  .jv-kpi-foot{margin-top:6px;font-size:10px;color:#6b7f95;letter-spacing:.04em;
-               overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px}
-  .jv-gauge{width:44px;height:44px;flex:none}
+  .jv-kpi-sub{font-size:12px;font-weight:600;color:#5a6b80;margin-left:5px}
+  .jv-kpi-label{margin-top:5px;font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:#7c8ea3}
+  .jv-kpi-foot{margin-top:5px;font-size:10.5px;color:#5f7085;
+               overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .jv-gauge{width:52px;height:52px;flex:none}
 
-  .jv-panels{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));align-items:start}
-  .jv-panel{padding:12px 14px;border-radius:6px}
-  .jv-panel.amber::before,.jv-panel.amber::after{border-color:var(--jv-amber)}
-  .jv-panel.violet::before,.jv-panel.violet::after{border-color:var(--jv-violet)}
-  .jv-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
-  .jv-panel-head h3{margin:0;font-family:Rajdhani,system-ui,sans-serif;font-size:13px;font-weight:700;
-                    letter-spacing:.12em;text-transform:uppercase;color:#fff}
-  .jv-panel-head h3 span{color:var(--jv-cyan)}
-  .jv-panel.amber .jv-panel-head h3 span{color:var(--jv-amber)}
-  .jv-pill{padding:2px 8px;border-radius:3px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  .jv-panels{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));align-items:start}
+  .jv-panel{padding:16px 18px}
+  .jv-panel-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .jv-panel-head h3{margin:0;font-family:Rajdhani,system-ui,sans-serif;font-size:14.5px;font-weight:700;
+                    letter-spacing:.02em;color:#f1f5f9;white-space:nowrap;overflow:hidden;
+                    text-overflow:ellipsis}
+  .jv-panel-head h3 span{color:var(--jv-amber);margin:0 3px}
+  .jv-panel.cyan .jv-panel-head h3 span{color:var(--jv-cyan)}
+  .jv-panel-head .jv-pill{margin-left:auto}
+  .jv-pill{padding:3px 9px;border-radius:999px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
            border:1px solid;white-space:nowrap;color:#8fa3b8;border-color:var(--jv-line);background:transparent}
-  .jv-pill.cyan{color:var(--jv-cyan);background:rgba(0,240,255,.1);border-color:rgba(0,240,255,.35)}
-  .jv-pill.amber{color:var(--jv-amber);background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.35)}
-  .jv-pill.violet{color:var(--jv-violet);background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.35)}
+  .jv-pill.cyan{color:var(--jv-cyan);background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.32)}
+  .jv-pill.amber{color:var(--jv-amber);background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.32)}
+  .jv-pill.violet{color:var(--jv-violet);background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.32)}
   .jv-pill.bad{color:var(--jv-crimson);background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4)}
 
-  .jv-telemetry{margin-bottom:10px;border-top:1px solid rgba(28,43,58,.85)}
-  .jv-row{display:flex;justify-content:space-between;gap:10px;padding:4px 0;
-          border-bottom:1px solid rgba(28,43,58,.55)}
-  .jv-row>span:first-child{color:#7f95ac;text-transform:uppercase;letter-spacing:.08em;font-size:10.5px}
-  .jv-v{color:#dbe7f3;font-size:11.5px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .jv-telemetry{margin-bottom:8px}
+  .jv-row{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
+  .jv-row>span:first-child{color:#6d7f95;text-transform:uppercase;letter-spacing:.09em;font-size:10px}
+  .jv-v{color:#c3d0de;font-size:11px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-  .jv-list{display:flex;flex-direction:column;gap:8px;max-height:330px;overflow:auto;padding-right:2px}
-  .jv-packet{background:var(--jv-nested);border:1px solid var(--jv-line);border-radius:4px;padding:8px 10px}
-  .jv-packet.amber:hover{border-color:rgba(245,158,11,.5)}
-  .jv-packet.cyan:hover{border-color:rgba(0,240,255,.5)}
-  .jv-packet-top{display:flex;align-items:center;gap:8px}
-  .jv-dot{width:7px;height:7px;border-radius:50%;background:#475569;flex:none}
-  .jv-dot.on{background:var(--jv-amber);box-shadow:0 0 8px rgba(245,158,11,.8)}
-  .jv-packet.cyan .jv-dot.on{background:var(--jv-cyan);box-shadow:0 0 8px rgba(0,240,255,.8)}
-  .jv-tag{padding:1px 6px;border-radius:2px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;border:1px solid}
-  .jv-tag.new{color:var(--jv-cyan);border-color:rgba(0,240,255,.4);background:rgba(0,240,255,.08)}
-  .jv-tag.flag{color:var(--jv-amber);border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08)}
-  .jv-subject{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-              font-size:12px;color:#eaf4ff}
-  .jv-time{font-size:10px;color:#64748b;flex:none}
-  .jv-packet-sub{margin-top:4px;padding-left:15px;font-size:11px;color:#94a3b8;
-                 overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .jv-empty{background:var(--jv-nested);border:1px solid var(--jv-line);border-radius:4px;
-            padding:14px;text-align:center;font-size:11px;color:#64748b}
-  .jv-event{display:flex;align-items:center;gap:12px;padding:7px 10px;background:var(--jv-nested);
-            border:1px solid var(--jv-line);border-radius:4px}
-  .jv-when{color:var(--jv-cyan);font-size:11.5px;flex:none;width:104px;letter-spacing:.03em}
-  .jv-what{font-size:12px;color:#eaf4ff;flex:1;min-width:0;overflow:hidden;
+  .jv-list{display:flex;flex-direction:column;max-height:330px;overflow:auto;padding-right:2px}
+  .jv-packet{display:flex;align-items:center;gap:11px;padding:9px 2px;
+             border-bottom:1px solid rgba(148,163,184,.09)}
+  .jv-packet:last-child{border-bottom:0}
+  .jv-packet:hover{background:rgba(148,163,184,.05)}
+  .jv-avatar{display:flex;align-items:center;justify-content:center;width:30px;height:30px;flex:none;
+             border-radius:9px;font-size:12px;font-weight:700;
+             color:var(--jv-cyan);background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.22)}
+  .jv-packet.amber .jv-avatar{color:var(--jv-amber);background:rgba(245,158,11,.12);
+                              border-color:rgba(245,158,11,.22)}
+  .jv-packet.cyan .jv-avatar{color:var(--jv-emerald);background:rgba(34,197,94,.12);
+                             border-color:rgba(34,197,94,.22)}
+  .jv-packet-body{flex:1;min-width:0}
+  .jv-packet-top{display:flex;align-items:center;gap:7px;min-width:0}
+  .jv-name{font-size:12.5px;font-weight:600;color:#e2e8f0;overflow:hidden;
            text-overflow:ellipsis;white-space:nowrap}
-  .jv-cal{color:#64748b;font-size:10px;flex:none;max-width:110px;overflow:hidden;
+  .jv-tag{padding:1px 5px;border-radius:3px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;border:1px solid}
+  .jv-tag.new{color:var(--jv-cyan);border-color:rgba(56,189,248,.4);background:rgba(56,189,248,.08)}
+  .jv-tag.flag{color:var(--jv-amber);border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08)}
+  .jv-time{font-size:10.5px;color:#5b6b7f;flex:none;align-self:flex-start;padding-top:2px}
+  .jv-packet-sub{margin-top:2px;font-size:11.5px;color:#8595a9;overflow:hidden;
+                 text-overflow:ellipsis;white-space:nowrap}
+  .jv-empty{border:1px dashed rgba(148,163,184,.18);border-radius:10px;
+            padding:18px;text-align:center;font-size:11.5px;color:#64748b}
+  .jv-event{display:flex;align-items:center;gap:12px;padding:9px 2px;
+            border-bottom:1px solid rgba(148,163,184,.09)}
+  .jv-event:last-child{border-bottom:0}
+  .jv-when{color:var(--jv-cyan);font-size:11.5px;flex:none;width:104px;letter-spacing:.03em}
+  .jv-what{font-size:12.5px;color:#e2e8f0;flex:1;min-width:0;overflow:hidden;
+           text-overflow:ellipsis;white-space:nowrap}
+  .jv-cal{color:#5b6b7f;font-size:10.5px;flex:none;max-width:110px;overflow:hidden;
           text-overflow:ellipsis;white-space:nowrap}
-  .jv-note-row{margin-top:8px;padding:7px 9px;border-left:2px solid rgba(245,158,11,.6);
+  .jv-note-row{margin-top:8px;padding:8px 10px;border-radius:8px;border-left:2px solid rgba(245,158,11,.6);
                background:rgba(245,158,11,.06);font-size:11px;color:#cbb391;line-height:1.45}
 
   .jv-chat .chat-log{max-height:250px}
-  .jv-chat .bubble{font-family:inherit;font-size:11.5px;border-radius:3px;
+  .jv-chat .bubble{font-family:inherit;font-size:11.5px;border-radius:10px;
                    background:var(--jv-nested);border-color:var(--jv-line)}
-  .jv-chat .bubble.me{background:rgba(0,240,255,.08);border-color:rgba(0,240,255,.35);color:#dffcff}
+  .jv-chat .bubble.me{background:rgba(56,189,248,.08);border-color:rgba(56,189,248,.35);color:#dff4ff}
   .jv-chat .bubble .who{color:var(--jv-cyan)}
   .jv-chat .chat-compose textarea{background:var(--jv-nested);border-color:var(--jv-line);
                                   font-family:inherit;font-size:11.5px}
-  .jv-chat .btn{font-family:inherit;font-size:11.5px;border-radius:3px}
+  .jv-chat .btn{font-family:inherit;font-size:11.5px;border-radius:8px}
   .jv-chat .msg{font-size:10.5px;color:#64748b}
 
   @media (max-width:760px){
@@ -334,6 +346,13 @@
     </g>
     <g id="i-cube" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
       <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5"/><path d="M12 12v9"/>
+    </g>
+    <g id="i-calendar" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+      <rect x="3.5" y="5" width="17" height="15" rx="2.2"/><path d="M3.5 10h17"/>
+      <path d="M8 3v4"/><path d="M16 3v4"/>
+    </g>
+    <g id="i-mail" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+      <rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.6 7l8.4 6 8.4-6"/>
     </g>
     <g id="i-logout" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
       <path d="M15 4h3.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H15"/>
@@ -440,21 +459,10 @@
 
         <!-- telemetry header -->
         <header class="jv-head jv-frame">
-          <div class="jv-scan"></div>
-          <div class="jv-core">
-            <svg viewBox="0 0 64 64" class="jv-reactor">
-              <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(0,240,255,.18)" stroke-width="1.5"/>
-              <circle cx="32" cy="32" r="23" fill="none" stroke="#00f0ff" stroke-width="2"
-                      stroke-dasharray="18 8 6 8" class="jv-spin"/>
-              <circle cx="32" cy="32" r="16" fill="none" stroke="#0ea5e9" stroke-width="1.5"
-                      stroke-dasharray="10 6" class="jv-spin-rev"/>
-              <circle cx="32" cy="32" r="7" fill="rgba(0,240,255,.22)" stroke="#00f0ff" stroke-width="1.5"/>
-              <circle cx="32" cy="32" r="2.5" fill="#00f0ff"/>
-            </svg>
-          </div>
+          <span class="jv-tile cyan"><svg class="icon"><use href="#i-gauge"/></svg></span>
           <div class="jv-head-main">
             <div class="jv-head-line">
-              <h2 class="jv-title">TODAY <span>//</span> BRIEFING</h2>
+              <h2 class="jv-title">TODAY <span>/</span> BRIEFING</h2>
               <span class="jv-badge" id="jv-badge">
                 <span class="jv-pulse"></span><span id="jv-badge-text">SYNCING</span>
               </span>
@@ -470,29 +478,29 @@
         <!-- metric boxes -->
         <section class="jv-kpis">
           <div class="jv-kpi cyan">
+            <span class="jv-tile cyan"><svg class="icon"><use href="#i-terminal"/></svg></span>
             <div class="jv-kpi-body">
-              <div class="jv-kpi-label"><span class="jv-idx">IDX-01</span>TEXTS TODAY</div>
-              <div class="jv-kpi-value"><span id="jv-kpi-texts">0</span>
-                <span class="jv-kpi-sub" id="jv-kpi-texts-sub">/ 0</span></div>
+              <div class="jv-kpi-value"><span id="jv-kpi-texts">0</span> <span class="jv-kpi-sub" id="jv-kpi-texts-sub">/ 0</span></div>
+              <div class="jv-kpi-label">Unread texts</div>
               <div class="jv-kpi-foot">unread of today's messages</div>
             </div>
             <svg viewBox="0 0 44 44" class="jv-gauge">
-              <circle cx="22" cy="22" r="15" fill="none" stroke="#1c2b3a" stroke-width="3"/>
-              <circle id="jv-gauge-texts" cx="22" cy="22" r="15" fill="none" stroke="#00f0ff"
+              <circle cx="22" cy="22" r="15" fill="none" stroke="rgba(148,163,184,.18)" stroke-width="3"/>
+              <circle id="jv-gauge-texts" cx="22" cy="22" r="15" fill="none" stroke="#38bdf8"
                       stroke-width="3" stroke-dasharray="0 94" stroke-linecap="round"
                       transform="rotate(-90 22 22)"/>
             </svg>
           </div>
 
           <div class="jv-kpi amber">
+            <span class="jv-tile amber"><svg class="icon"><use href="#i-mail"/></svg></span>
             <div class="jv-kpi-body">
-              <div class="jv-kpi-label"><span class="jv-idx">PRI-02</span>IMPORTANT MAIL</div>
-              <div class="jv-kpi-value"><span id="jv-kpi-mail">0</span>
-                <span class="jv-kpi-sub" id="jv-kpi-mail-sub">/ 0</span></div>
+              <div class="jv-kpi-value"><span id="jv-kpi-mail">0</span> <span class="jv-kpi-sub" id="jv-kpi-mail-sub">/ 0</span></div>
+              <div class="jv-kpi-label">Important mail</div>
               <div class="jv-kpi-foot">unread or flagged</div>
             </div>
             <svg viewBox="0 0 44 44" class="jv-gauge">
-              <circle cx="22" cy="22" r="15" fill="none" stroke="#1c2b3a" stroke-width="3"/>
+              <circle cx="22" cy="22" r="15" fill="none" stroke="rgba(148,163,184,.18)" stroke-width="3"/>
               <circle id="jv-gauge-mail" cx="22" cy="22" r="15" fill="none" stroke="#f59e0b"
                       stroke-width="3" stroke-dasharray="0 94" stroke-linecap="round"
                       transform="rotate(-90 22 22)"/>
@@ -500,28 +508,29 @@
           </div>
 
           <div class="jv-kpi emerald">
+            <span class="jv-tile emerald"><svg class="icon"><use href="#i-calendar"/></svg></span>
             <div class="jv-kpi-body">
-              <div class="jv-kpi-label"><span class="jv-idx">CAL-03</span>SCHEDULE</div>
-              <div class="jv-kpi-value"><span id="jv-kpi-cal">0</span>
-                <span class="jv-kpi-sub">today</span></div>
+              <div class="jv-kpi-value"><span id="jv-kpi-cal">0</span> <span class="jv-kpi-sub">today</span></div>
+              <div class="jv-kpi-label">Today's events</div>
               <div class="jv-kpi-foot" id="jv-kpi-cal-foot">nothing on the calendar</div>
             </div>
             <svg viewBox="0 0 44 44" class="jv-gauge">
-              <circle cx="22" cy="22" r="15" fill="none" stroke="#1c2b3a" stroke-width="3"/>
-              <circle id="jv-gauge-cal" cx="22" cy="22" r="15" fill="none" stroke="#10b981"
+              <circle cx="22" cy="22" r="15" fill="none" stroke="rgba(148,163,184,.18)" stroke-width="3"/>
+              <circle id="jv-gauge-cal" cx="22" cy="22" r="15" fill="none" stroke="#22c55e"
                       stroke-width="3" stroke-dasharray="0 94" stroke-linecap="round"
                       transform="rotate(-90 22 22)"/>
             </svg>
           </div>
 
           <div class="jv-kpi violet">
+            <span class="jv-tile violet"><svg class="icon"><use href="#i-server"/></svg></span>
             <div class="jv-kpi-body">
-              <div class="jv-kpi-label"><span class="jv-idx">SRC-04</span>MAIL SOURCE</div>
               <div class="jv-kpi-value"><span id="jv-kpi-src">–</span></div>
+              <div class="jv-kpi-label">Mail source</div>
               <div class="jv-kpi-foot" id="jv-kpi-src-foot">reading…</div>
             </div>
             <svg viewBox="0 0 44 44" class="jv-gauge">
-              <circle cx="22" cy="22" r="15" fill="none" stroke="#1c2b3a" stroke-width="3"/>
+              <circle cx="22" cy="22" r="15" fill="none" stroke="rgba(148,163,184,.18)" stroke-width="3"/>
               <circle cx="22" cy="22" r="15" fill="none" stroke="#a78bfa" stroke-width="3"
                       stroke-dasharray="70 94" stroke-linecap="round" transform="rotate(-90 22 22)"/>
             </svg>
@@ -532,7 +541,8 @@
         <section class="jv-panels">
           <div class="jv-panel amber jv-frame">
             <div class="jv-panel-head">
-              <h3>IMPORTANT <span>//</span> MAIL STREAM</h3>
+              <span class="jv-tile amber"><svg class="icon"><use href="#i-mail"/></svg></span>
+              <h3>Important <span>/</span> Mail stream</h3>
               <span class="jv-pill amber" id="jv-mail-state">loading…</span>
             </div>
             <div class="jv-telemetry" id="jv-mail-meta">
@@ -543,7 +553,8 @@
 
           <div class="jv-panel cyan jv-frame">
             <div class="jv-panel-head">
-              <h3>TODAY <span>//</span> SCHEDULE</h3>
+              <span class="jv-tile cyan"><svg class="icon"><use href="#i-calendar"/></svg></span>
+              <h3>Today <span>/</span> Schedule</h3>
               <span class="jv-pill cyan" id="jv-cal-state">loading…</span>
             </div>
             <div class="jv-list" id="jv-schedule"></div>
@@ -551,7 +562,8 @@
 
           <div class="jv-panel cyan jv-frame">
             <div class="jv-panel-head">
-              <h3>MESSAGES <span>//</span> TODAY</h3>
+              <span class="jv-tile cyan"><svg class="icon"><use href="#i-terminal"/></svg></span>
+              <h3>Messages <span>/</span> Today</h3>
               <span class="jv-pill cyan" id="jv-msg-state">loading…</span>
             </div>
             <div class="jv-list" id="jv-messages"></div>
@@ -1987,17 +1999,21 @@ function jvEmpty(text) {
   return '<div class="jv-empty">' + smEsc(text) + "</div>";
 }
 
-// One packet row: unread dot, tags, the line that matters, and when it arrived.
+// One row: who wrote, what it says under it, and when it arrived.
 function jvPacket(item, tone) {
+  const name = tone === "amber" ? (item.sender || "unknown") : (item.who || "unknown");
+  const line = tone === "amber" ? (item.subject || "(no subject)") : (item.text || "");
+  const initial = (name.trim()[0] || "?").toUpperCase();
   const tag = item.unread ? '<span class="jv-tag new">new</span>' : "";
   const flag = item.flagged ? '<span class="jv-tag flag">flag</span>' : "";
-  const head = tone === "amber" ? (item.subject || "(no subject)") : (item.who || "unknown");
-  const sub = tone === "amber" ? (item.sender || "") : (item.text || "");
   return '<div class="jv-packet ' + tone + '">' +
-    '<div class="jv-packet-top"><span class="jv-dot' + (item.unread ? " on" : "") + '"></span>' +
-    tag + flag + '<span class="jv-subject">' + smEsc(head) + "</span>" +
-    '<span class="jv-time">' + smEsc(item.at || "") + "</span></div>" +
-    '<div class="jv-packet-sub">' + smEsc(sub) + "</div></div>";
+    '<span class="jv-avatar">' + smEsc(initial) + "</span>" +
+    '<div class="jv-packet-body">' +
+      '<div class="jv-packet-top"><span class="jv-name">' + smEsc(name) + "</span>" +
+      tag + flag + "</div>" +
+      '<div class="jv-packet-sub">' + smEsc(line) + "</div>" +
+    "</div>" +
+    '<span class="jv-time">' + smEsc(item.at || "") + "</span></div>";
 }
 
 function jvRender(d) {
