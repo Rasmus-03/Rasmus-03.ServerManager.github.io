@@ -587,6 +587,19 @@ function fmtUptime(s) {
   return s.replace(/-/g, "d ").replace(/:/g, ":");
 }
 
+// Seconds as something readable: "15 h 10 min" beats "15:10:37" when the
+// point is how long something has been up.
+function fmtSpan(sec) {
+  if (sec === null || sec === undefined) return "–";
+  sec = Math.max(0, Math.round(sec));
+  if (sec < 90) return sec + " s";
+  const min = Math.round(sec / 60);
+  if (min < 60) return min + " min";
+  const hours = Math.floor(min / 60);
+  if (hours < 36) return hours + " h" + (min % 60 ? " " + (min % 60) + " min" : "");
+  return Math.round(hours / 24) + " d";
+}
+
 function showConnect(show, message) {
   $("connect-screen").classList.toggle("hidden", !show);
   if (show) {
@@ -753,7 +766,15 @@ async function getStatus() {
 
     pill($("orca-app"), d.orca.app_running ? "Running" : "Stopped", d.orca.app_running ? "up" : "down");
     pill($("orca-web"), d.orca.web_up ? "Reachable" : "Offline", d.orca.web_up ? "up" : "down");
-    $("orca-uptime").textContent = fmtUptime(d.orca.uptime);
+    // Orca's own start time when it can be read, ps only when it cannot, and
+    // the number says which: a pid-based uptime can belong to a helper.
+    const orcaSecs = d.orca.uptime_seconds;
+    $("orca-uptime").textContent = (orcaSecs === null || orcaSecs === undefined)
+      ? fmtUptime(d.orca.uptime) : fmtSpan(orcaSecs);
+    $("orca-uptime").title = d.orca.uptime_source === "runtime"
+      ? "Since Orca started, from its own runtime file"
+      : (d.orca.uptime_source === "ps"
+          ? "From ps; Orca's runtime file could not be read" : "");
     $("orca-port").textContent = `:${d.orca.port}`;
 
     $("net-local").textContent = `127.0.0.1:${mc.port}`;
