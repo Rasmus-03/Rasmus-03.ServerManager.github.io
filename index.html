@@ -285,6 +285,8 @@
                                   font-family:inherit;font-size:11.5px}
   .jv-chat .btn{font-family:inherit;font-size:11.5px;border-radius:8px}
   .jv-chat .msg{font-size:10.5px;color:#64748b}
+  .chat-log .fb{display:flex;gap:6px;margin:4px 0 2px 2px}
+  .chat-log .fb .btn{padding:2px 8px;font-size:10.5px;border-radius:6px;line-height:1.5}
 
   @media (max-width:760px){
     .app{flex-direction:column}
@@ -837,6 +839,8 @@
             <button class="btn" type="button" id="jv-clear" title="Forget this conversation">Clear</button>
           </form>
           <div class="msg" id="jv-note">Answered by OpenJarvis on the Mac.</div>
+          <div class="msg" id="jv-memory"
+               title="Corrections sent with every question — /learn and /forget edit them"></div>
         </div>
       </div>
     </section>
@@ -897,7 +901,7 @@ function setTab(tab) {
   if (tab === "console") getLog();
   if (tab === "server") smLoadTab();
   if (tab === "dashboard") { smLoadOrca(); briefLoad(); }
-  if (tab === "jarvis") jvStatus();
+  if (tab === "jarvis") { jvStatus(); jvMemory(); }
   if (tab === "inbox") inLoad();
 }
 
@@ -2152,11 +2156,92 @@ async function jvStatus() {
   }
 }
 
+// The rules Jarvis answers under. They belong to the owner, so the strip says
+// how many there are and what the newest one is, and /forget takes one back.
+function jvMemoryText(d) {
+  if (!d || !d.count) return "Memory: nothing learned yet — correct an answer, or /learn a rule.";
+  const last = (d.lessons || [])[d.lessons.length - 1] || {};
+  const score = (d.up || d.down) ? " · " + (d.up || 0) + " good, " + (d.down || 0) + " wrong" : "";
+  return "Memory: " + d.count + " rule" + (d.count === 1 ? "" : "s") + score +
+    " · last: " + (last.text || "").slice(0, 90);
+}
+
+async function jvMemory() {
+  const el = $("jv-memory");
+  if (!el) return null;
+  try {
+    const d = await smGet("/api/jarvis/memory");
+    el.textContent = jvMemoryText(d);
+    return d;
+  } catch (e) {
+    el.textContent = "Memory unreadable.";
+    return null;
+  }
+}
+
+// Two buttons under an answer. A thumbs-down asks what was wrong, and that
+// sentence becomes the rule the next question is answered under.
+function jvFeedback(bubble, question) {
+  const row = document.createElement("div");
+  row.className = "fb";
+  const good = document.createElement("button");
+  good.type = "button";
+  good.className = "btn";
+  good.textContent = "Good";
+  const bad = document.createElement("button");
+  bad.type = "button";
+  bad.className = "btn";
+  bad.textContent = "Wrong…";
+  const rate = async (verdict, note) => {
+    row.remove();
+    try {
+      const d = await smPost("/api/jarvis/memory", { action: "feedback", verdict, note, question });
+      $("jv-note").textContent = d.learned
+        ? "Learned: " + d.learned.text
+        : (verdict === "up" ? "Noted." : "Marked as wrong.");
+      jvMemory();
+    } catch (e) {
+      $("jv-note").textContent = smWhy(e);
+    }
+  };
+  good.onclick = () => rate("up", "");
+  bad.onclick = () => {
+    const note = (window.prompt("What should Jarvis have done instead?") || "").trim();
+    if (!note) { row.remove(); return; }
+    rate("down", note);
+  };
+  row.appendChild(good);
+  row.appendChild(bad);
+  bubble.appendChild(row);
+}
+
 async function jvSend() {
   if (JV.busy) return;
   const input = $("jv-input");
   const text = input.value.trim();
   if (!text) return;
+
+  // /learn and /forget never reach the model: they edit the memory directly.
+  const cmd = /^\/(learn|forget)\s+([\s\S]+)$/i.exec(text);
+  if (cmd) {
+    input.value = "";
+    jvBubble("you", text, "me");
+    try {
+      const d = await smPost("/api/jarvis/memory",
+        { action: cmd[1].toLowerCase(), text: cmd[2].trim() });
+      $("jv-note").className = "msg";
+      $("jv-note").textContent = cmd[1].toLowerCase() === "learn"
+        ? (d.learned ? "Learned: " + d.learned.text : "Nothing added.")
+        : (d.removed ? "Forgot " + d.removed + " rule" + (d.removed === 1 ? "" : "s") + "."
+                     : "No rule matched that.");
+      jvMemory();
+    } catch (e) {
+      $("jv-note").className = "msg err";
+      $("jv-note").textContent = smWhy(e);
+    }
+    return;
+  }
+
   JV.busy = true;
   $("jv-send").disabled = true;
   $("jv-note").className = "msg";
@@ -2169,8 +2254,12 @@ async function jvSend() {
     const d = await smPost("/api/jarvis/chat", { messages: JV.messages });
     pending.lastChild.textContent = d.reply;
     JV.messages.push({ role: "assistant", content: d.reply });
+    $("jv-note").className = "msg";
     $("jv-note").textContent = (d.model || "OpenJarvis") +
-      (d.tokens ? " · " + d.tokens + " tokens" : "");
+      (d.tokens ? " · " + d.tokens + " tokens" : "") +
+      (d.learned ? " · learned: " + d.learned.text : "");
+    jvFeedback(pending, text);
+    if (d.learned) jvMemory();
   } catch (e) {
     // The question that failed stays out of the history, so asking again is
     // one click rather than a retype.
