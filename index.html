@@ -2098,11 +2098,19 @@ function jvRender(d) {
     $("jv-cal-state").textContent = events.length ? events.length + " today" : "clear";
     $("jv-cal-state").className = "jv-pill cyan";
     $("jv-schedule").innerHTML = (events.length
-      ? events.map((e) =>
-          '<div class="jv-event"><span class="jv-when">' +
-          (e.all_day ? "all day" : smEsc(e.start) + "–" + smEsc(e.end)) + "</span>" +
-          '<span class="jv-what">' + smEsc(e.title) + "</span>" +
-          '<span class="jv-cal">' + smEsc(e.calendar || "") + "</span></div>").join("")
+      ? events.map((e) => {
+          // A trip that started yesterday or runs into next week is still one
+          // row: the arrow means it was already running, "(+n)" how far it goes.
+          const later = e.ends_on
+            ? " until " + new Date(e.ends_on + "T12:00").toLocaleDateString(
+                "en-GB", { day: "numeric", month: "short" })
+            : "";
+          const when = e.all_day ? "all day" + later
+            : (e.continues ? "→ " : "") + smEsc(e.start) + "–" + smEsc(e.end) + later;
+          return '<div class="jv-event"><span class="jv-when">' + when + "</span>" +
+            '<span class="jv-what">' + smEsc(e.title) + "</span>" +
+            '<span class="jv-cal">' + smEsc(e.calendar || "") + "</span></div>";
+        }).join("")
       : jvEmpty("nothing on the calendar today")) + jvNoteRow(cal.note);
   } else {
     $("jv-cal-state").textContent = "unreadable";
