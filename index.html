@@ -1964,9 +1964,6 @@ document.querySelectorAll("[data-copy]").forEach((btn) =>
     setTimeout(() => { btn.innerHTML = original; }, 1500);
   }));
 
-$("net-base").textContent = API;
-if (SESSION) { showConnect(false); getStatus(); getLog(); smLoadOrca(); briefLoad(); }
-else { showConnect(true); }
 setInterval(getStatus, 5000);
 setInterval(() => { if (!document.hidden && TAB === "dashboard" && SESSION) smLoadOrca(); }, 5000);
 setInterval(() => { if (!document.hidden && TAB === "console") getLog(); }, 4000);
@@ -2249,11 +2246,13 @@ async function briefLoad() {
   if (BRIEF_BUSY) return;
   BRIEF_BUSY = true;
   jvClock();
+  // The portfolio moves far slower than mail, so it is only asked for once
+  // every five minutes — and it is asked for alongside the brief, not after
+  // it: a second round trip on the end is what made the holdings panel the
+  // last thing on the dashboard to fill.
+  if (!HOLD_AT || Date.now() - HOLD_AT > HOLD_EVERY) holdLoad();
   try {
     jvRender(await smGet("/api/briefing"));
-    // The portfolio moves far slower than mail, so the minute tick only asks
-    // for it once every five minutes.
-    if (!HOLD_AT || Date.now() - HOLD_AT > HOLD_EVERY) holdLoad();
   } catch (e) {
     const why = smWhy(e);
     ["jv-mail", "jv-messages", "jv-schedule"].forEach((id) => { $(id).innerHTML = jvEmpty(why); });
@@ -2522,6 +2521,14 @@ async function inTriage(dry) {
 $("in-preview").addEventListener("click", () => inTriage(true));
 $("in-triage").addEventListener("click", () => inTriage(false));
 setInterval(() => { if (!document.hidden && TAB === "inbox") inLoad(); }, 60000);
+
+// The first load runs last, once every binding above exists. These calls read
+// the state the panels keep (BRIEF_BUSY, HOLD_AT and the rest), and a `let`
+// read before its own declaration throws — which left the panels empty until
+// the next minute's tick filled them in.
+$("net-base").textContent = API;
+if (SESSION) { showConnect(false); getStatus(); getLog(); smLoadOrca(); briefLoad(); }
+else { showConnect(true); }
 </script>
 </body>
 </html>
