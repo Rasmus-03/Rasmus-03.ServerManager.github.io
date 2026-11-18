@@ -1030,7 +1030,7 @@ document.addEventListener("visibilitychange", () => {
   if (!SESSION) return;
   if (STATUS.answered && Date.now() - STATUS.seen > 15000) markUnknown();
   getStatus();
-  if (TAB === "dashboard") smLoadOrca();
+  if (TAB === "dashboard") { smLoadOrca(); briefLoad(); }
 });
 
 async function getStatus() {
@@ -1936,6 +1936,9 @@ else { showConnect(true); }
 setInterval(getStatus, 5000);
 setInterval(() => { if (!document.hidden && TAB === "dashboard" && SESSION) smLoadOrca(); }, 5000);
 setInterval(() => { if (!document.hidden && TAB === "console") getLog(); }, 4000);
+// The briefing changes slower than a status poll, so it keeps its own beat, and
+// only while the Dashboard is the tab on screen.
+setInterval(() => { if (!document.hidden && TAB === "dashboard" && SESSION) briefLoad(); }, 60000);
 
 /* ── jarvis tab ─────────────────────────────────────────────────────────── */
 // The browser talks to this Mac's own API and nothing else: the tunnel, the
@@ -2102,7 +2105,13 @@ function jvRender(d) {
 }
 
 // The dashboard owns the briefing; the Jarvis tab only asks how the agent is.
+let BRIEF_BUSY = false;
+
 async function briefLoad() {
+  // The panel refreshes on a timer, so a slow Mac must not collect a queue of
+  // requests behind one that is still running.
+  if (BRIEF_BUSY) return;
+  BRIEF_BUSY = true;
   jvClock();
   try {
     jvRender(await smGet("/api/briefing"));
@@ -2111,6 +2120,8 @@ async function briefLoad() {
     ["jv-mail", "jv-messages", "jv-schedule"].forEach((id) => { $(id).innerHTML = jvEmpty(why); });
     $("jv-badge-text").textContent = "partial";
     $("jv-badge").className = "jv-badge bad";
+  } finally {
+    BRIEF_BUSY = false;
   }
 }
 
