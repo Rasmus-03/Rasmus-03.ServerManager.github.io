@@ -23,7 +23,15 @@
     --orange:#ff9f0a;
     --blue:#64b5ff;
   }
-  *{box-sizing:border-box}
+  *{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.28) transparent}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(148,163,184,.24);border-radius:8px;
+                            border:3px solid transparent;background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(148,163,184,.42);background-clip:content-box}
+  /* Keyboard users get the same visible mark the mouse gets on hover. */
+  :where(button,a,input,textarea,select,summary):focus-visible{
+    outline:2px solid rgba(100,181,255,.8);outline-offset:2px}
   html,body{height:100%}
   body{
     margin:0;color:var(--text);
@@ -59,8 +67,10 @@
     display:flex;align-items:center;gap:10px;padding:10px 12px;border:0;border-radius:9px;
     background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer;width:100%
   }
+  .nav-item{transition:background .15s ease,color .15s ease}
   .nav-item:hover{background:rgba(255,255,255,.05)}
-  .nav-item.active{background:var(--panel-blue);color:#fff}
+  .nav-item.active{background:var(--panel-blue);color:#fff;
+                   box-shadow:0 1px 0 rgba(255,255,255,.08) inset}
   .sidebar-spacer{flex:1}
 
   /* ── cards / panels ──────────────────────────────────── */
@@ -111,8 +121,10 @@
   .buttons{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center}
   .btn{display:inline-flex;align-items:center;gap:7px;font:inherit;font-size:12.5px;font-weight:500;
        padding:6px 12px;border-radius:6px;border:1px solid var(--stroke);
-       background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;text-decoration:none}
+       background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;text-decoration:none;
+       transition:background .15s ease,border-color .15s ease,filter .15s ease,transform .06s ease}
   .btn:hover{background:rgba(255,255,255,.09)}
+  .btn:active{transform:translateY(1px)}
   .btn:disabled{opacity:.4;cursor:not-allowed}
   .btn.primary{background:var(--panel-blue);border-color:var(--panel-blue);color:#fff}
   .btn.primary:hover{filter:brightness(1.12)}
@@ -133,15 +145,24 @@
 
   /* connect screen: the Pages copy has no cookie session, so it asks for the
      email and password itself and keeps the bearer token in this browser. */
-  .overlay{position:fixed;inset:0;background:rgba(15,16,18,.96);display:grid;place-items:center;z-index:10;padding:20px}
+  .overlay{position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:20px;
+           background:radial-gradient(900px 480px at 50% -10%,rgba(16,33,50,.9),rgba(7,11,17,.97) 72%);
+           -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+           animation:fade-in .18s ease-out}
   .overlay.hidden{display:none}
-  .connect{background:var(--card-bg);border:1px solid var(--stroke);border-radius:12px;
-           padding:24px;width:min(92vw,420px)}
-  .connect h1{font-size:17px;margin:0 0 6px}
+  @keyframes fade-in{from{opacity:0}to{opacity:1}}
+  .connect{background:linear-gradient(180deg,rgba(18,26,37,.98),rgba(11,17,24,.98));
+           border:1px solid rgba(148,163,184,.18);border-radius:14px;
+           padding:26px;width:min(92vw,420px);
+           box-shadow:0 24px 60px rgba(0,0,0,.55),0 1px 0 rgba(255,255,255,.04) inset}
+  .connect h1{font-size:17px;margin:0 0 6px;letter-spacing:-.01em}
   .connect p{color:var(--secondary);font-size:12.5px;margin:0 0 16px}
   .connect label{display:block;font-size:11px;color:var(--secondary);margin:12px 0 5px}
-  .connect input{width:100%;padding:9px 11px;border-radius:7px;border:1px solid var(--stroke);
-                 background:#1a1b1e;color:var(--text);font-size:13px}
+  .connect input{width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--stroke);
+                 background:#151a21;color:var(--text);font-size:13px;
+                 transition:border-color .15s ease,box-shadow .15s ease}
+  .connect input:focus{outline:none;border-color:rgba(100,181,255,.6);
+                       box-shadow:0 0 0 3px rgba(100,181,255,.14)}
   .connect .btn{margin-top:16px;width:100%;justify-content:center;padding:9px}
 
   /* ── jarvis tab ─────────────────────────────────────── */
@@ -274,6 +295,8 @@
   .jv-eq-change{display:block;margin-top:2px;font-size:11.5px;color:#8fa3b8}
   .jv-eq-change.jv-gain,.jv-eq-period .jv-gain{color:#34d399}
   .jv-eq-change.jv-loss,.jv-eq-period .jv-loss{color:#f87171}
+  /* The note about deposits is context, not the number itself. */
+  .jv-eq-change .jv-flow{color:#64748b;font-weight:500}
   .jv-eq-plot{position:relative;margin-top:8px;padding-right:44px}
   .jv-eq-y{position:absolute;top:0;bottom:0;right:0;display:flex;flex-direction:column;
            justify-content:space-between;font-size:10px;color:#5b6b7f;text-align:right;
@@ -322,13 +345,18 @@
   .chat-log .fb{display:flex;gap:6px;margin:4px 0 2px 2px}
   .chat-log .fb .btn{padding:2px 8px;font-size:10.5px;border-radius:6px;line-height:1.5}
 
-  @media (max-width:760px){
+  @media (max-width:900px){
     .app{flex-direction:column}
     .sidebar{width:auto;border-right:0;border-bottom:1px solid var(--stroke)}
-    .nav{flex-direction:row;overflow:auto}
-    .nav-item{width:auto;white-space:nowrap}
+    .nav{flex-direction:row;overflow:auto;gap:6px;padding-bottom:2px}
+    .nav-item{width:auto;white-space:nowrap;padding:9px 12px}
     .sidebar-spacer{display:none}
-    .main{padding:16px}
+    .main{padding:16px;gap:14px}
+    .page-title h1{font-size:24px}
+    .grid,.metrics{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
   }
 
   /* ── server control tab ─────────────────────────────── */
@@ -2272,8 +2300,8 @@ function jvChart(history, currency, plan) {
     : shown
     ? '<span class="jv-eq-change' + tone + '">' + label + " " +
       jvPctText(shown.pct) + " " + smEsc(jvSigned(shown.change, currency)) +
-      (shown.flows.count ? " · uden " + shown.flows.amount.toLocaleString("da-DK") +
-        " kr indskud" : "") + "</span>"
+      (shown.flows.count ? '<span class="jv-flow"> · uden ' +
+        shown.flows.amount.toLocaleString("da-DK") + " kr indskud</span>" : "") + "</span>"
     : '<span class="jv-eq-change">' + label + " — not that far back yet</span>";
 
   return '<div class="jv-eq">' +
