@@ -2282,7 +2282,7 @@ function jvHoldings(d) {
   const pos = d.positions || [];
   // An export has quantities and what was paid, but no market value: saying
   // that is better than printing a zero that reads like a total loss.
-  const exported = d.source === "csv";
+  const exported = d.source === "csv" || d.source === "typed";
   $("jv-hold-state").textContent = pos.length ? pos.length + " holdings" : "empty";
   $("jv-hold-state").className = "jv-pill violet";
   $("jv-hold-meta").innerHTML = (exported ? [
@@ -2290,8 +2290,8 @@ function jvHoldings(d) {
     ...(d.deposits ? [["Deposited", jvMoney(d.deposits.net, d.deposits.currency) +
       (d.deposits.count ? " · " + d.deposits.count + " in" : "")]] : []),
     ["Positions", String(pos.length)],
-    ["Export", d.updated || "—"],
-    ["Source", "CSV export, no API"],
+    [d.source === "typed" ? "List" : "Export", d.updated || "—"],
+    ["Source", d.source === "typed" ? "Your own list, priced daily" : "CSV export, no API"],
   ] : [
     ["Value", jvMoney(d.total_value, d.currency)],
     ["P/L", jvMoney(d.total_profit, d.currency) + " · " + jvPct(d.total_profit_pct)],
