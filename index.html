@@ -268,6 +268,9 @@
   .jv-event{display:flex;align-items:center;gap:12px;padding:9px 2px;
             border-bottom:1px solid rgba(148,163,184,.09)}
   .jv-event:last-child{border-bottom:0}
+  .jv-event.next{border-top:1px dashed rgba(148,163,184,.22);margin-top:2px;padding-top:11px}
+  .jv-event.next .jv-when{color:var(--jv-emerald)}
+  .jv-event.next .jv-what{color:#cbd5e1}
   .jv-when{color:var(--jv-cyan);font-size:11.5px;flex:none;width:104px;letter-spacing:.03em}
   .jv-what{font-size:12.5px;color:#e2e8f0;flex:1;min-width:0;overflow:hidden;
            text-overflow:ellipsis;white-space:nowrap}
@@ -2020,6 +2023,19 @@ function jvPacket(item, tone) {
     '<span class="jv-time">' + smEsc(item.at || "") + "</span></div>";
 }
 
+// "tomorrow 08:15", "all day", "Thu 20 Nov 10:00" — the next event's own day,
+// so an evening panel can say what the morning brings.
+function jvNextWhen(nx) {
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const when = new Date(nx.date + "T12:00");
+  const days = Math.round((when - today) / 86400000);
+  const day = days === 0 ? "today"
+    : days === 1 ? "tomorrow"
+    : when.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  return nx.all_day ? day + " · all day" : day + " " + nx.start;
+}
+
 function jvRender(d) {
   $("jv-day").textContent = d.day || "–";
   $("jv-host").textContent = location.host || "localhost";
@@ -2045,12 +2061,13 @@ function jvRender(d) {
   $("jv-kpi-mail-sub").textContent = "/ " + real.length;
   jvRing("jv-gauge-mail", real.length ? important.length / real.length : 0);
 
+  const upcoming = cal.next || null;
   $("jv-kpi-cal").textContent = String(events.length);
   $("jv-kpi-cal-foot").textContent = !cal.available
     ? "calendar not readable"
-    : events.length
-      ? (events[0].all_day ? "all day" : "first at " + events[0].start) + " · " + events[0].title
-      : "nothing on the calendar";
+    : upcoming
+      ? "next: " + jvNextWhen(upcoming) + " · " + upcoming.title
+      : events.length ? "nothing more today" : "nothing on the calendar";
   jvRing("jv-gauge-cal", Math.min(1, events.length / 6));
 
   const source = mail.source || "";
@@ -2097,8 +2114,7 @@ function jvRender(d) {
   if (cal.available) {
     $("jv-cal-state").textContent = events.length ? events.length + " today" : "clear";
     $("jv-cal-state").className = "jv-pill cyan";
-    $("jv-schedule").innerHTML = (events.length
-      ? events.map((e) => {
+    const rows = events.map((e) => {
           // A trip that started yesterday or runs into next week is still one
           // row: the arrow means it was already running, "(+n)" how far it goes.
           const later = e.ends_on
@@ -2110,7 +2126,18 @@ function jvRender(d) {
           return '<div class="jv-event"><span class="jv-when">' + when + "</span>" +
             '<span class="jv-what">' + smEsc(e.title) + "</span>" +
             '<span class="jv-cal">' + smEsc(e.calendar || "") + "</span></div>";
-        }).join("")
+        });
+    // The upcoming event gets its own row only when it is not already listed
+    // above, so an evening shows today's rows and then tomorrow's first one.
+    const todayIso = new Date().toLocaleDateString("sv-SE");
+    if (upcoming && upcoming.date !== todayIso) {
+      rows.push('<div class="jv-event next"><span class="jv-when">' +
+        smEsc(jvNextWhen(upcoming)) + "</span>" +
+        '<span class="jv-what"><span class="jv-tag new">next</span> ' +
+        smEsc(upcoming.title) + "</span>" +
+        '<span class="jv-cal">' + smEsc(upcoming.calendar || "") + "</span></div>");
+    }
+    $("jv-schedule").innerHTML = (rows.length ? rows.join("")
       : jvEmpty("nothing on the calendar today")) + jvNoteRow(cal.note);
   } else {
     $("jv-cal-state").textContent = "unreadable";
