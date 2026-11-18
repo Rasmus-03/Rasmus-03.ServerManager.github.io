@@ -824,36 +824,34 @@ async function getStatus() {
     drawDisk("side-disk", "server");
     drawDisk("side-disk-mac", "internal");
 
-    // The same red rule for what the server itself is spending: ps reports CPU
-    // as a share of one core, and RAM is worth flagging only once it nears the
-    // heap the server was started with.
-    const res = mc.resources || {};
-    const serverOn = Boolean(mc.pid);
+    // CPU and RAM belong to the MacBook, not to the server running on it: the
+    // sidebar answers "is this machine busy", while the server's own share is
+    // still in mc.resources for whoever wants it.
+    const load = machine.load || {};
     const cpuLine = $("side-cpu");
     if (cpuLine) {
-      if (!serverOn) {
-        cpuLine.textContent = "–";
-        cpuLine.title = "the server is not running";
+      if (load.cpu_percent === null || load.cpu_percent === undefined) {
+        cpuLine.textContent = load.error ? "–" : "unknown";
+        cpuLine.title = load.error || "";
         cpuLine.style.color = "";
       } else {
-        const pct = Number(res.cpu_percent || 0);
+        const pct = Math.round(load.cpu_percent);
         cpuLine.textContent = pct + "%";
-        cpuLine.title = pct >= 100 ? "a full core, or more" : "share of one core";
-        cpuLine.style.color = pct >= 100 ? "var(--red)" : "";
+        cpuLine.title = "this MacBook, all processes";
+        cpuLine.style.color = pct >= 85 ? "var(--red)" : "";
       }
     }
     const ramLine = $("side-ram");
     if (ramLine) {
-      const used = Number(res.rss_mb || 0);
-      const limit = Number(mc.ram_mb || 0);
-      if (!serverOn) {
-        ramLine.textContent = "–";
-        ramLine.title = "the server is not running";
+      if (load.ram_used_gb === null || load.ram_used_gb === undefined) {
+        ramLine.textContent = load.error ? "–" : "unknown";
+        ramLine.title = load.error || "";
         ramLine.style.color = "";
       } else {
-        ramLine.textContent = limit ? used + " of " + limit + " MB" : used + " MB";
-        const hot = limit > 0 && used >= limit * 0.9;
-        ramLine.title = hot ? "near the heap limit" : "resident memory of the server";
+        ramLine.textContent = load.ram_used_gb + " of " + load.ram_total_gb + " GB";
+        const hot = Number(load.ram_percent || 0) >= 90;
+        ramLine.title = (hot ? "Memory is nearly full · " : "this MacBook · ") +
+          (load.ram_percent === null || load.ram_percent === undefined ? "" : load.ram_percent + "% used");
         ramLine.style.color = hot ? "var(--red)" : "";
       }
     }
