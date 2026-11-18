@@ -2007,7 +2007,11 @@ function jvRender(d) {
   const textItems = texts.items || [];
   const mailItems = mail.items || [];
   const events = cal.items || [];
-  const important = mailItems.filter((i) => i.unread || i.flagged);
+  // Advertising and list mail never reach the important stream: they are what
+  // the sort exists to clear, so they are counted aside instead of listed.
+  const real = mailItems.filter((i) => !i.noise);
+  const hidden = mailItems.length - real.length;
+  const important = real.filter((i) => i.unread || i.flagged);
 
   // ── metric boxes ──
   $("jv-kpi-texts").textContent = String(texts.unread || 0);
@@ -2015,8 +2019,8 @@ function jvRender(d) {
   jvRing("jv-gauge-texts", textItems.length ? (texts.unread || 0) / textItems.length : 0);
 
   $("jv-kpi-mail").textContent = String(important.length);
-  $("jv-kpi-mail-sub").textContent = "/ " + mailItems.length;
-  jvRing("jv-gauge-mail", mailItems.length ? important.length / mailItems.length : 0);
+  $("jv-kpi-mail-sub").textContent = "/ " + real.length;
+  jvRing("jv-gauge-mail", real.length ? important.length / real.length : 0);
 
   $("jv-kpi-cal").textContent = String(events.length);
   $("jv-kpi-cal-foot").textContent = !cal.available
@@ -2043,6 +2047,7 @@ function jvRender(d) {
     ["Unread", String(mailItems.filter((i) => i.unread).length)],
     ["Flagged", String(mailItems.filter((i) => i.flagged).length)],
     ["Window", "newest " + (mail.window || 0) + " per inbox"],
+    ["Filtered", hidden ? hidden + " ads or list mail" : "none"],
   ];
   if ((mail.accounts || []).length) {
     meta.push(["Accounts", mail.accounts.map((a) => a.name + " " + a.unread).join(" · ")]);
@@ -2052,12 +2057,13 @@ function jvRender(d) {
     smEsc(v) + "</span></div>").join("");
 
   if (mail.available) {
-    const unread = mailItems.filter((i) => i.unread).length;
-    $("jv-mail-state").textContent = unread ? unread + " unread" : "nothing unread";
+    const unread = real.filter((i) => i.unread).length;
+    $("jv-mail-state").textContent = (unread ? unread + " unread" : "nothing unread") +
+      (hidden ? " · " + hidden + " filtered" : "");
     $("jv-mail-state").className = "jv-pill amber";
-    $("jv-mail").innerHTML = (mailItems.length
-      ? mailItems.slice(0, 8).map((i) => jvPacket(i, "amber")).join("")
-      : jvEmpty("nothing unread or flagged")) + jvNoteRow(mail.note);
+    $("jv-mail").innerHTML = (real.length
+      ? real.slice(0, 8).map((i) => jvPacket(i, "amber")).join("")
+      : jvEmpty("no real mail waiting — the rest is advertising")) + jvNoteRow(mail.note);
   } else {
     $("jv-mail-state").textContent = "unreadable";
     $("jv-mail-state").className = "jv-pill bad";
