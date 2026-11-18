@@ -262,6 +262,13 @@
   .jv-tag.flag{color:var(--jv-amber);border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08)}
   .jv-panel.violet .jv-panel-head h3 span{color:var(--jv-violet)}
   .jv-up{color:#34d399}.jv-down{color:#f87171}.jv-flat{color:#7c8ea3}
+  /* the wide holdings box: figures on the left, the line on the right */
+  .jv-hold-body{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+  .jv-hold-figures{flex:1 1 340px;min-width:0}
+  .jv-chart{flex:1 1 420px;min-width:240px}
+  .jv-spark{display:block;width:100%;height:190px}
+  .jv-chart-foot{display:flex;justify-content:space-between;gap:10px;margin-top:6px;
+                 font-size:10.5px;color:#5b6b7f}
   .jv-time{font-size:10.5px;color:#5b6b7f;flex:none;align-self:flex-start;padding-top:2px}
   .jv-packet-sub{margin-top:2px;font-size:11.5px;color:#8595a9;overflow:hidden;
                  text-overflow:ellipsis;white-space:nowrap}
@@ -589,8 +596,13 @@
             <h3>Holdings <span>/</span> Nordnet</h3>
             <span class="jv-pill violet" id="jv-hold-state">loading…</span>
           </div>
-          <div class="jv-telemetry" id="jv-hold-meta"></div>
-          <div class="jv-list" id="jv-hold"></div>
+          <div class="jv-hold-body">
+            <div class="jv-hold-figures">
+              <div class="jv-telemetry" id="jv-hold-meta"></div>
+              <div class="jv-list" id="jv-hold"></div>
+            </div>
+            <div class="jv-chart" id="jv-chart"></div>
+          </div>
         </div>
       </div>
       <div class="card">
@@ -2066,7 +2078,9 @@ function jvUpNext(upcoming, todayIso) {
 // The figures are read on the Mac and proxied like the brief: the Nordnet key
 // never reaches this page. Five minutes is plenty for a long-term portfolio.
 let HOLD_BUSY = false, HOLD_AT = 0;
-const HOLD_EVERY = 300000;
+// Prices are cached for the day and an export is a local file, so a shorter
+// beat costs nothing and lets a fresh download show up within two minutes.
+const HOLD_EVERY = 120000;
 
 function jvMoney(v, cur) {
   const n = Number(v || 0);
@@ -2090,12 +2104,48 @@ function jvPosRow(p, exported) {
     '<span class="jv-cal">' + smEsc(right) + "</span></div>";
 }
 
+// One point per day, drawn as a line: the figures keep the left side of the
+// wide box and the shape takes the right, so no second box is needed.
+function jvChart(history) {
+  const points = (history || []).filter((p) => typeof p.value === "number");
+  if (points.length < 2) {
+    return jvEmpty(points.length ? "one day so far — the line needs two"
+      : "the line starts with its second day");
+  }
+  const w = 640, h = 190, pad = 10;
+  const values = points.map((p) => p.value);
+  const min = Math.min(...values), max = Math.max(...values);
+  const span = (max - min) || Math.max(1, Math.abs(max) * 0.01);
+  const x = (i) => pad + (i * (w - pad * 2)) / (points.length - 1);
+  const y = (v) => h - pad - ((v - min) / span) * (h - pad * 2);
+  const line = points.map((p, i) =>
+    (i ? "L" : "M") + x(i).toFixed(1) + " " + y(p.value).toFixed(1)).join(" ");
+  const area = line + " L" + x(points.length - 1).toFixed(1) + " " + (h - pad) +
+    " L" + x(0).toFixed(1) + " " + (h - pad) + " Z";
+  const last = points[points.length - 1];
+  return '<svg class="jv-spark" viewBox="0 0 ' + w + " " + h + '" ' +
+    'preserveAspectRatio="none" role="img" aria-label="value over time">' +
+    '<defs><linearGradient id="jvSparkFill" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0%" stop-color="rgba(167,139,250,.38)"/>' +
+    '<stop offset="100%" stop-color="rgba(167,139,250,0)"/></linearGradient></defs>' +
+    '<path d="' + area + '" fill="url(#jvSparkFill)"/>' +
+    '<path d="' + line + '" fill="none" stroke="#a78bfa" stroke-width="2" ' +
+    'vector-effect="non-scaling-stroke"/>' +
+    '<circle cx="' + x(points.length - 1).toFixed(1) + '" cy="' + y(last.value).toFixed(1) +
+    '" r="3" fill="#a78bfa"/></svg>' +
+    '<div class="jv-chart-foot"><span>' + smEsc(points[0].date) + "</span>" +
+    "<span>" + smEsc(jvMoney(max, "")) + " / " + smEsc(jvMoney(min, "")) + "</span>" +
+    "<span>" + smEsc(last.date) + "</span></div>";
+}
+
 function jvHoldings(d) {
   if (!d.available) {
     $("jv-hold-state").textContent = "not set up";
     $("jv-hold-state").className = "jv-pill bad";
     $("jv-hold-meta").innerHTML = "";
     $("jv-hold").innerHTML = jvEmpty(d.note || "no Nordnet figures");
+    const empty = $("jv-chart");
+    if (empty) empty.innerHTML = "";
     return;
   }
   const pos = d.positions || [];
@@ -2119,6 +2169,8 @@ function jvHoldings(d) {
   $("jv-hold").innerHTML = (pos.length
     ? pos.slice(0, 8).map((p) => jvPosRow(p, exported)).join("")
     : jvEmpty("no open positions")) + jvNoteRow(exported ? d.note : "");
+  const chart = $("jv-chart");
+  if (chart) chart.innerHTML = jvChart(d.history);
 }
 
 async function holdLoad() {
