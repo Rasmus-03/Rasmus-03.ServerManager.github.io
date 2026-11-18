@@ -615,17 +615,18 @@ $("connect-form").addEventListener("submit", async (e) => {
 
 $("disconnect").addEventListener("click", () => disconnect());
 
-let lastSeen = 0;      // when the last /api/status answer arrived
-let hasAnswer = false; // whether one ever did
-let orcaSeen = 0;      // and the same for the Orca activity card
-let orcaAnswered = false;
+// A probe whose answers can stop arriving: when it last answered, and which
+// request is the current one, so a slow reply cannot undo a newer one.
+function newProbe() { return { seen: 0, answered: false, seq: 0 }; }
+const STATUS = newProbe();
+const ORCA = newProbe();
 
 // One wording for both cards: an answer that never arrived is not a stopped
 // server, so say what is unknown and when the values on screen were true.
-function unknownLine(seen, answered) {
-  if (!answered) return "Unknown · no answer yet";
+function unknownLine(probe) {
+  if (!probe.answered) return "Unknown · no answer yet";
   // Fixed 24-hour form: the browser's locale would give "08.13" or "8:13 AM".
-  const d = new Date(seen);
+  const d = new Date(probe.seen);
   return "Unknown · last seen " + String(d.getHours()).padStart(2, "0") +
     ":" + String(d.getMinutes()).padStart(2, "0");
 }
@@ -634,7 +635,7 @@ function unknownLine(seen, answered) {
 // line above says how old they are.
 function markUnknown() {
   $("side-dot").className = "dot unknown";
-  $("side-state").textContent = unknownLine(lastSeen, hasAnswer);
+  $("side-state").textContent = unknownLine(STATUS);
   $("m-status").textContent = "Unknown";
   $("m-status-icon").style.color = "var(--orange, #ff9f0a)";
   pill($("rows-service"), "Unknown", "unknown");
@@ -653,23 +654,25 @@ $("reload-page").addEventListener("click", () => location.reload());
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) return;
   if (!SESSION) return;
-  if (hasAnswer && Date.now() - lastSeen > 15000) markUnknown();
+  if (STATUS.answered && Date.now() - STATUS.seen > 15000) markUnknown();
   getStatus();
   if (TAB === "dashboard") smLoadOrca();
 });
 
 async function getStatus() {
   if (!API || !SESSION) return;
+  const seq = ++STATUS.seq;
   try {
     const r = await api("/api/status", { headers: { Accept: "application/json" } });
     const d = await r.json();
+    if (seq !== STATUS.seq) return; // a newer poll has already answered
     const mc = d.minecraft;
     const running = mc.launchd_state === "running" || mc.port_open;
     const players = mc.players ? `${mc.players.online} / ${mc.players.max}` : null;
     const version = mc.players ? mc.players.version : null;
 
-    lastSeen = Date.now();
-    hasAnswer = true;
+    STATUS.seen = Date.now();
+    STATUS.answered = true;
     $("reload-page").style.display = "none";
 
     $("side-dot").className = "dot" + (running ? " up" : "");
@@ -779,6 +782,7 @@ async function getStatus() {
     }
       } catch (e) {
       if (String(e.message) === "unauthorized") return;
+      if (seq !== STATUS.seq) return;
       markUnknown();
     }
 }
@@ -951,10 +955,12 @@ function smAgo(sec) {
 async function smLoadOrca() {
   const list = document.getElementById("orca-live-list");
   if (!list) return;
+  const seq = ++ORCA.seq;
   try {
     const d = await smGet("/api/orca/activity");
-    orcaSeen = Date.now();
-    orcaAnswered = true;
+    if (seq !== ORCA.seq) return; // a newer poll has already answered
+    ORCA.seen = Date.now();
+    ORCA.answered = true;
     const s = d.session;
     const note = document.getElementById("orca-live-note");
     if (!d.available || !s) {
@@ -987,8 +993,9 @@ async function smLoadOrca() {
   } catch (e) {
     // Same language as the status card: a missing answer is not a stopped
     // Orca, so keep the last sessions on screen and say when they were true.
-    document.getElementById("orca-live-meta").textContent = unknownLine(orcaSeen, orcaAnswered);
-    if (!orcaAnswered) {
+    if (seq !== ORCA.seq) return;
+    document.getElementById("orca-live-meta").textContent = unknownLine(ORCA);
+    if (!ORCA.answered) {
       document.getElementById("orca-live-title").textContent = "Unknown";
       list.innerHTML = '<div class="item dim">no answer from the Mac yet</div>';
     }
