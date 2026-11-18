@@ -341,6 +341,9 @@
             <button class="btn danger" data-action="stop"><svg class="icon"><use href="#i-stop"/></svg>Stop</button>
             <span class="msg" id="mc-msg"></span>
           </div>
+          <!-- Shown only after the crash loop stopper unloaded the job itself. -->
+          <div class="dim" id="mc-crashloop"
+               style="display:none;color:var(--red);font-size:11.5px;line-height:1.45;margin-top:8px"></div>
         </div>
 
         <div class="card">
@@ -522,7 +525,28 @@
 </div>
 
 <script>
-const $ = (id) => document.getElementById(id);
+  const $ = (id) => document.getElementById(id);
+
+  // A request that never reached the Mac is not the Mac's answer. Tag it where
+  // the network call happens, so the display code never has to read error
+  // messages, and a bug in a render path keeps its own text.
+  class NoAnswer extends Error {
+    constructor(cause) {
+      super("no answer from the Mac");
+      this.name = "NoAnswer";
+      this.cause = cause;
+    }
+  }
+
+  async function dashFetch(url, opts) {
+    try {
+      return await fetch(url, opts);
+    } catch (e) {
+      if (e && e.name === "AbortError") throw e; // a cancel is not a lost Mac
+      throw new NoAnswer(e);
+    }
+  }
+
 // The Pages copy is served by GitHub, so it needs the tunnel address and its
 // own bearer session instead of the cookie the Mac's own page gets.
 const API_BASE = "https://worthy-friendly-eft.ngrok-free.app";
@@ -578,7 +602,7 @@ function disconnect(message) {
 }
 
 async function api(path, opts) {
-  const res = await fetch(API.replace(/\/+$/, "") + path, {
+  const res = await dashFetch(API.replace(/\/+$/, "") + path, {
     ...(opts || {}),
     headers: { ...TUNNEL, ...((opts && opts.headers) || {}), Authorization: "Bearer " + SESSION },
   });
@@ -592,7 +616,7 @@ $("connect-form").addEventListener("submit", async (e) => {
   $("connect-msg").textContent = "Connecting…";
   btn.disabled = true;
   try {
-    const res = await fetch(API + "/api/session", {
+    const res = await dashFetch(API + "/api/session", {
       method: "POST",
       headers: { ...TUNNEL, "Content-Type": "application/json" },
       body: JSON.stringify({ email: $("email").value, password: $("password").value }),
@@ -629,6 +653,23 @@ function unknownLine(probe) {
   const d = new Date(probe.seen);
   return "Unknown · last seen " + String(d.getHours()).padStart(2, "0") +
     ":" + String(d.getMinutes()).padStart(2, "0");
+}
+
+const NO_ANSWER = "Unknown · no answer from the Mac";
+
+// Only what dashFetch marked is a lost connection; everything else — a 500 from
+// the Mac, a bug in a render path — keeps its own words.
+function smOffline(e) {
+  return e instanceof NoAnswer;
+}
+
+function smWhy(e) {
+  return smOffline(e) ? NO_ANSWER : ((e && e.message) || "the request failed");
+}
+
+// For a button, the question is whether the action ever reached the Mac.
+function smWhyAction(e) {
+  return smOffline(e) ? "Unknown · the action may not have reached the Mac" : smWhy(e);
 }
 
 // Keep the last values: they are still the best information there is, and the
@@ -686,7 +727,22 @@ async function getStatus() {
     $("m-uptime").textContent = fmtUptime(mc.uptime);
     $("m-port").textContent = mc.port_open ? String(mc.port) : "closed";
 
-    pill($("rows-service"), running ? "Online" : "Offline", running ? "up" : "down");
+    // A server the stopper took down is not simply offline: it was stopped on
+    // purpose, and the longer explanation belongs next to the buttons.
+    const crash = mc.crashloop || {};
+    const crashNote = $("mc-crashloop");
+    if (crash.tripped) {
+      pill($("rows-service"), "Stopped itself", "down");
+      crashNote.style.display = "block";
+      crashNote.textContent =
+        `Stopped itself after ${crash.restarts} restarts in ` +
+        `${Math.round((crash.window_seconds || 600) / 60)} min (last at ${crash.at}). ` +
+        "Its launchd job is unloaded, so nothing restarts the JVM until Start is pressed.";
+    } else {
+      pill($("rows-service"), running ? "Online" : "Offline", running ? "up" : "down");
+      crashNote.style.display = "none";
+      crashNote.textContent = "";
+    }
     $("rows-version").textContent = version || "Paper";
     $("rows-players").textContent = players || "–";
     $("rows-uptime").textContent = fmtUptime(mc.uptime);
@@ -783,7 +839,11 @@ async function getStatus() {
       } catch (e) {
       if (String(e.message) === "unauthorized") return;
       if (seq !== STATUS.seq) return;
-      markUnknown();
+      if (smOffline(e)) { markUnknown(); return; }
+      // A bug in the page is not a lost connection, and calling it one would
+      // hide the fault: show it, and leave the trace in the console.
+      console.error(e);
+      $("page-sub").textContent = "Server Manager · panel error: " + ((e && e.message) || "unknown");
     }
 }
 
@@ -799,7 +859,11 @@ async function getLog() {
     if (atBottom) pre.scrollTop = pre.scrollHeight;
     const source = $("log-source");
     if (source) source.textContent = d.source ? "live · " + d.source.split("/").slice(-2).join("/") : "";
-  } catch (e) {}
+  } catch (e) {
+    // The pane keeps its last lines; the label has to say they are old.
+    const source = $("log-source");
+    if (source && smOffline(e)) source.textContent = NO_ANSWER;
+  }
 }
 
 async function act(action, btn) {
@@ -834,7 +898,7 @@ async function act(action, btn) {
 /* ── server control tab ─────────────────────────────────────────────────── */
 const smEsc = (v) => String(v ?? "").replace(/[&<>"']/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const smFetch = (path, opts) => (typeof api === "function" ? api(path, opts) : fetch(path, opts));
+const smFetch = (path, opts) => (typeof api === "function" ? api(path, opts) : dashFetch(path, opts));
 
 function smMsg(id, text, isErr) {
   const el = document.getElementById(id);
@@ -894,7 +958,7 @@ async function smLoadServers() {
       (s.exists ? "" : ' <span class="pill down">missing</span>') + "</span></div>"
     )).join("") || '<div class="row"><span>No server</span><span>–</span></div>';
   } catch (e) {
-    smMsg("srv-msg", e.message, true);
+    smMsg("srv-msg", smWhy(e), true);
   }
   try {
     const st = await smGet("/api/status");
@@ -905,7 +969,10 @@ async function smLoadServers() {
         : '<span class="pill idle">' + (mc.rcon.enabled ? "on, no password" : "off") + "</span>";
     }
     if (mc.ram_mb) document.getElementById("ram").value = mc.ram_mb;
-  } catch (e) {}
+  } catch (e) {
+    // "off" is a reading; a missing answer is not one.
+    if (smOffline(e)) pill(document.getElementById("rcon-state"), "Unknown", "unknown");
+  }
 }
 
 async function smLoadProperties() {
@@ -918,13 +985,15 @@ async function smLoadProperties() {
       smEsc(d.properties[key] ?? "") + '"></div>'
     )).join("");
   } catch (e) {
-    document.getElementById("props").innerHTML = '<div class="msg err">' + smEsc(e.message) + "</div>";
+    document.getElementById("props").innerHTML = '<div class="msg err">' + smEsc(smWhy(e)) + "</div>";
   }
   try {
     const eula = await smGet("/api/eula");
     document.getElementById("eula-state").innerHTML = eula.accepted
       ? '<span class="pill up">accepted</span>' : '<span class="pill down">not accepted</span>';
-  } catch (e) {}
+  } catch (e) {
+    if (smOffline(e)) pill(document.getElementById("eula-state"), "Unknown", "unknown");
+  }
 }
 
 async function smLoadPlugins() {
@@ -939,7 +1008,7 @@ async function smLoadPlugins() {
       '<button class="btn small danger" data-plugin-delete="' + smEsc(p.name) + '">Delete</button></div>'
     )).join("") || '<div class="item dim">No plugin jars</div>';
   } catch (e) {
-    box.innerHTML = '<div class="item dim">' + smEsc(e.message) + "</div>";
+    box.innerHTML = '<div class="item dim">' + smEsc(smWhy(e)) + "</div>";
   }
 }
 
@@ -994,6 +1063,12 @@ async function smLoadOrca() {
     // Same language as the status card: a missing answer is not a stopped
     // Orca, so keep the last sessions on screen and say when they were true.
     if (seq !== ORCA.seq) return;
+    if (!smOffline(e)) {
+      console.error(e);
+      document.getElementById("orca-live-meta").textContent =
+        "panel error: " + ((e && e.message) || "unknown");
+      return;
+    }
     document.getElementById("orca-live-meta").textContent = unknownLine(ORCA);
     if (!ORCA.answered) {
       document.getElementById("orca-live-title").textContent = "Unknown";
@@ -1028,7 +1103,7 @@ async function smLoadBackups() {
         : "No off-machine copy: " + (cloud.dir || "the cloud folder") + " is missing or read-only");
     }
   } catch (e) {
-    box.innerHTML = '<div class="item dim">' + smEsc(e.message) + "</div>";
+    box.innerHTML = '<div class="item dim">' + smEsc(smWhy(e)) + "</div>";
   }
 }
 
@@ -1045,7 +1120,7 @@ async function smUpdate(show) {
       '<div class="row"><span>Update</span><span>' + (d.update_available
         ? '<span class="pill blue">available</span>' : '<span class="pill idle">' + smEsc(d.note || "up to date") + "</span>") + "</span></div>";
   } catch (e) {
-    if (show) rows.innerHTML = '<div class="row"><span>Check failed</span><span class="dim">' + smEsc(e.message) + "</span></div>";
+    if (show) rows.innerHTML = '<div class="row"><span>Check failed</span><span class="dim">' + smEsc(smWhy(e)) + "</span></div>";
   }
 }
 
@@ -1063,7 +1138,7 @@ async function smAction(action) {
     await smPost("/api/minecraft/" + action, {});
     smMsg("srv-msg", action + " sent");
   } catch (e) {
-    smMsg("srv-msg", e.message, true);
+    smMsg("srv-msg", smWhyAction(e), true);
   }
   setTimeout(getStatus, 600);
   setTimeout(smLoadServers, 1200);
@@ -1078,7 +1153,7 @@ document.getElementById("save-ram").addEventListener("click", async () => {
     const ram = Number(document.getElementById("ram").value);
     const d = await smPost("/api/settings", { ram_mb: ram });
     smMsg("srv-msg", "RAM set to " + d.ram_mb + " MB");
-  } catch (e) { smMsg("srv-msg", e.message, true); }
+  } catch (e) { smMsg("srv-msg", smWhyAction(e), true); }
 });
 
 document.getElementById("cmd-form").addEventListener("submit", async (ev) => {
@@ -1093,7 +1168,7 @@ document.getElementById("cmd-form").addEventListener("submit", async (ev) => {
     out.textContent = "> " + command + "\n" + (d.output || "(no reply)");
     input.value = "";
   } catch (e) {
-    out.textContent = "> " + command + "\n" + e.message;
+    out.textContent = "> " + command + "\n" + smWhyAction(e);
   }
 });
 
@@ -1107,7 +1182,7 @@ document.getElementById("btn-players").addEventListener("click", async () => {
     }
     const names = (d.names || []).join(", ");
     out.textContent = d.raw || ("online " + d.online + "/" + d.max + (names ? ": " + names : ""));
-  } catch (e) { out.textContent = e.message; }
+  } catch (e) { out.textContent = smWhy(e); }
 });
 
 document.getElementById("save-props").addEventListener("click", async () => {
@@ -1118,7 +1193,7 @@ document.getElementById("save-props").addEventListener("click", async () => {
   try {
     const d = await smPost("/api/properties", { updates });
     smMsg("props-msg", "Saved " + d.changed.length + " setting(s); restart to apply");
-  } catch (e) { smMsg("props-msg", e.message, true); }
+  } catch (e) { smMsg("props-msg", smWhyAction(e), true); }
 });
 
 document.getElementById("eula-toggle").addEventListener("click", async () => {
@@ -1126,7 +1201,7 @@ document.getElementById("eula-toggle").addEventListener("click", async () => {
     const current = await smGet("/api/eula");
     await smPost("/api/eula", { accepted: !current.accepted });
     smLoadProperties();
-  } catch (e) { smMsg("srv-msg", e.message, true); }
+  } catch (e) { smMsg("srv-msg", smWhyAction(e), true); }
 });
 
 document.getElementById("orca-restart").addEventListener("click", async () => {
@@ -1139,7 +1214,7 @@ document.getElementById("orca-restart").addEventListener("click", async () => {
     msg.textContent = d.web_up ? "restarted in " + d.seconds + "s" : "restarted, web UI still starting";
     getStatus();
   } catch (e) {
-    msg.textContent = e.message;
+    msg.textContent = smWhyAction(e);
   } finally {
     btn.disabled = false;
   }
@@ -1155,7 +1230,7 @@ document.getElementById("machine-restart").addEventListener("click", async () =>
   } catch (e) {
     btn.disabled = false;
     btn.textContent = "Restart Mac";
-    alert("Restart not started: " + e.message);
+    alert("Restart not started: " + smWhyAction(e));
   }
 });
 
@@ -1164,7 +1239,7 @@ document.getElementById("rcon-enable").addEventListener("click", async () => {
     const d = await smPost("/api/rcon/enable", {});
     smMsg("srv-msg", "RCON on, port " + d.port + " — restart the server");
     smLoadServers();
-  } catch (e) { smMsg("srv-msg", e.message, true); }
+  } catch (e) { smMsg("srv-msg", smWhyAction(e), true); }
 });
 
 // What the last search was run against, for the "install anyway" question.
@@ -1208,7 +1283,7 @@ async function smSearchMods() {
         ? (cf.note ? " · CurseForge: " + cf.note : " · sources: Modrinth + CurseForge")
         : " · CurseForge off: " + (cf.note || "no API key"));
   } catch (e) {
-    box.innerHTML = '<div class="item dim">' + smEsc(e.message) + "</div>";
+    box.innerHTML = '<div class="item dim">' + smEsc(smWhy(e)) + "</div>";
   }
 }
 
@@ -1227,7 +1302,10 @@ async function smLoadRecommended() {
         '<button class="btn small" data-mod-install="' + smEsc(m.slug) +
         '" data-mod-source="modrinth">Install</button></div>'
       )).join("");
-  } catch (e) { box.innerHTML = ""; }
+  } catch (e) {
+    // An empty box reads as "nothing recommended"; the truth is unknown.
+    box.innerHTML = '<div class="item dim">' + smEsc(smWhy(e)) + "</div>";
+  }
 }
 
 document.getElementById("mod-open").addEventListener("click", async () => {
@@ -1235,7 +1313,7 @@ document.getElementById("mod-open").addEventListener("click", async () => {
   try {
     const d = await smPost("/api/mods/open", {});
     msg.textContent = "opened " + d.opened;
-  } catch (e) { msg.textContent = e.message; }
+  } catch (e) { msg.textContent = smWhyAction(e); }
 });
 
 // A plugin whose author does not publish on Modrinth: fetch the jar they offer,
@@ -1256,7 +1334,7 @@ document.getElementById("jar-from-url").addEventListener("click", async () => {
       : "installed " + d.installed + " (" + (d.size_kb || 0) + " kB) — " + d.note +
         " — restart the server to load it";
     await smLoadPlugins();
-  } catch (e) { msg.textContent = e.message; }
+  } catch (e) { msg.textContent = smWhyAction(e); }
 });
 
 document.getElementById("jar-pick").addEventListener("click", () => {
@@ -1277,7 +1355,7 @@ document.getElementById("jar-file").addEventListener("change", async () => {
       : "installed " + d.installed + " (" + (d.size_kb || 0) + " kB) — " + d.note +
         " — restart the server to load it";
     await smLoadPlugins();
-  } catch (e) { msg.textContent = e.message; }
+  } catch (e) { msg.textContent = smWhyAction(e); }
   finally { input.value = ""; }
 });
 
@@ -1309,7 +1387,7 @@ document.getElementById("mod-results").addEventListener("click", async (ev) => {
         (d.note ? " — " + d.note : "") + " — restart the server to load it";
     await smLoadPlugins();
   } catch (e) {
-    msg.textContent = e.message;
+    msg.textContent = smWhyAction(e);
   } finally {
     btn.disabled = false;
   }
@@ -1327,7 +1405,7 @@ document.getElementById("plugins").addEventListener("click", async (ev) => {
       await smPost("/api/plugins/delete", { name: remove.dataset.pluginDelete });
       smLoadPlugins();
     }
-  } catch (e) { smMsg("srv-msg", e.message, true); }
+  } catch (e) { smMsg("srv-msg", smWhyAction(e), true); }
 });
 
 document.getElementById("backup-create").addEventListener("click", async () => {
@@ -1340,7 +1418,7 @@ document.getElementById("backup-create").addEventListener("click", async () => {
                 : "VERIFICATION FAILED: " + (check.error || "unknown")) +
       " · " + ((d.cloud || {}).ok ? "copied off the Mac" : "no off-site copy"));
     smLoadBackups();
-  } catch (e) { smMsg("backup-msg", e.message, true); }
+  } catch (e) { smMsg("backup-msg", smWhyAction(e), true); }
 });
 
 document.getElementById("backups").addEventListener("click", async (ev) => {
@@ -1355,7 +1433,7 @@ document.getElementById("backups").addEventListener("click", async (ev) => {
       await smPost("/api/backups/delete", { name: remove.dataset.backupDelete });
     }
     smLoadBackups();
-  } catch (e) { smMsg("backup-msg", e.message, true); }
+  } catch (e) { smMsg("backup-msg", smWhyAction(e), true); }
 });
 
 document.getElementById("update-check").addEventListener("click", () => smUpdate(true));
@@ -1367,15 +1445,22 @@ document.getElementById("update-download").addEventListener("click", async () =>
     const d = await smPost("/api/update", { download: true });
     smMsg("srv-msg", "downloaded " + d.downloaded + " (" + d.size_mb + " MB)");
     smUpdate(false);
-  } catch (e) { smMsg("srv-msg", e.message, true); btn.disabled = false; }
+  } catch (e) { smMsg("srv-msg", smWhyAction(e), true); btn.disabled = false; }
 });
 
 /* ── auto-restart, server creation, playit ──────────────────────────────── */
 async function smLoadAutoRestart() {
+  const box = document.getElementById("autorestart");
   try {
     const st = await smGet("/api/status");
-    document.getElementById("autorestart").checked = !!(st.minecraft || {}).autorestart;
-  } catch (e) {}
+    box.checked = !!(st.minecraft || {}).autorestart;
+    box.disabled = false;
+    box.title = "";
+  } catch (e) {
+    // A stale checkbox reads as a live setting, so take it out of play.
+    box.disabled = true;
+    box.title = smWhy(e);
+  }
 }
 
 document.getElementById("autorestart").addEventListener("change", async (ev) => {
@@ -1383,7 +1468,7 @@ document.getElementById("autorestart").addEventListener("change", async (ev) => 
     const d = await smPost("/api/autorestart", { enabled: ev.target.checked });
     smMsg("srv-msg", "auto-restart " + (d.enabled ? "on" : "off"));
   } catch (e) {
-    smMsg("srv-msg", e.message, true);
+    smMsg("srv-msg", smWhyAction(e), true);
     ev.target.checked = !ev.target.checked;
   }
 });
@@ -1397,7 +1482,7 @@ async function smLoadVersions() {
     sel.innerHTML = d.versions.map((v) =>
       '<option value="' + smEsc(v) + '">' + smEsc(v) + "</option>").join("");
   } catch (e) {
-    sel.innerHTML = '<option value="">' + smEsc(e.message) + "</option>";
+    sel.innerHTML = '<option value="">' + smEsc(smWhy(e)) + "</option>";
   }
 }
 
@@ -1420,7 +1505,7 @@ document.getElementById("create-server").addEventListener("click", async () => {
     smMsg("new-msg", d.jar + " · " + d.jar_mb + " MB · " +
       (d.registered_in_app ? "added to Server Manager" : "files only, add it in the app"));
     smLoadServers();
-  } catch (e) { smMsg("new-msg", e.message, true); }
+  } catch (e) { smMsg("new-msg", smWhyAction(e), true); }
 });
 
 document.querySelectorAll(".nav-item").forEach((btn) =>
