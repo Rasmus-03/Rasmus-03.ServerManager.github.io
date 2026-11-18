@@ -47,6 +47,7 @@
   .info-line{display:flex;gap:10px;justify-content:space-between;font-size:11px;padding:2px 0}
   .info-line > span:first-child{color:var(--secondary);flex:none}
   .info-line span:last-child{text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .info-line .share{color:var(--secondary);font-size:10px;margin-left:6px}
   .nav{display:flex;flex-direction:column;gap:4px}
   .nav-item{
     display:flex;align-items:center;gap:10px;padding:9px 12px;border:0;border-radius:8px;
@@ -232,8 +233,8 @@
       <div class="info-line"><span>Port</span><span id="side-port">unknown</span></div>
       <div class="info-line"><span>Server disk</span><span id="side-disk">unknown</span></div>
       <div class="info-line"><span>Mac disk</span><span id="side-disk-mac">unknown</span></div>
-      <div class="info-line"><span>CPU</span><span id="side-cpu">unknown</span></div>
-      <div class="info-line"><span>RAM</span><span id="side-ram">unknown</span></div>
+      <div class="info-line"><span>CPU</span><span><span id="side-cpu">unknown</span><span class="share" id="side-cpu-mc"></span></span></div>
+      <div class="info-line"><span>RAM</span><span><span id="side-ram">unknown</span><span class="share" id="side-ram-mc"></span></span></div>
     </div>
 
     <nav class="nav">
@@ -699,6 +700,15 @@ function markUnknown() {
   pill($("net-orca"), "Unknown", "unknown");
   $("page-sub").textContent = "Server Manager · no answer from the Mac";
   $("reload-page").style.display = "";
+  // Last poll's share is not this poll's: leave the machine numbers as they
+  // are (they say unknown above) and drop the server's share entirely.
+  ["side-cpu-mc", "side-ram-mc"].forEach((id) => {
+    const el = $(id);
+    if (!el) return;
+    el.textContent = "";
+    el.title = "";
+    el.style.display = "none";
+  });
 }
 
 $("reload-page").addEventListener("click", () => location.reload());
@@ -825,9 +835,30 @@ async function getStatus() {
     drawDisk("side-disk-mac", "internal");
 
     // CPU and RAM belong to the MacBook, not to the server running on it: the
-    // sidebar answers "is this machine busy", while the server's own share is
-    // still in mc.resources for whoever wants it.
+    // sidebar answers "is this machine busy", and the server's own share sits
+    // beside it, so how much of that load is Minecraft is visible at a glance.
     const load = machine.load || {};
+    const res = mc.resources || {};
+    const drawShare = (id, text, title) => {
+      const el = $(id);
+      if (!el) return;
+      el.textContent = text || "";
+      el.title = text ? title || "" : "";
+      el.style.display = text ? "" : "none";
+    };
+    // Only while the server runs: a stopped server's 0% is not a share.
+    const serverAlive = !!mc.pid;
+    const cpuShare = serverAlive && res.cpu_percent !== null && res.cpu_percent !== undefined
+      ? `MC ${Math.round(res.cpu_percent)}%` : "";
+    const rssMb = res.rss_mb;
+    const ramShare = serverAlive && typeof rssMb === "number" && rssMb > 0
+      ? (rssMb >= 1024 ? `MC ${(rssMb / 1024).toFixed(1)} GB` : `MC ${rssMb} MB`) : "";
+    drawShare("side-cpu-mc", cpuShare,
+      "the Minecraft JVMs only, not the whole MacBook");
+    drawShare("side-ram-mc", ramShare,
+      "the Minecraft JVMs only" + (ramShare && Number(load.ram_total_gb)
+        ? ` · ${Math.round(rssMb / 1024 / Number(load.ram_total_gb) * 100)}% of this MacBook's memory`
+        : ""));
     const cpuLine = $("side-cpu");
     if (cpuLine) {
       if (load.cpu_percent === null || load.cpu_percent === undefined) {
