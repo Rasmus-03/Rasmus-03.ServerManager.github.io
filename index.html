@@ -878,6 +878,11 @@ async function getStatus() {
         ramLine.textContent = load.error ? "–" : "unknown";
         ramLine.title = load.error || "";
         ramLine.style.color = "";
+      } else if (!load.ram_total_gb) {
+        // sysctl did not answer: the used part is real, a total would not be.
+        ramLine.textContent = load.ram_used_gb + " GB used";
+        ramLine.title = "this MacBook · total unknown (sysctl did not answer)";
+        ramLine.style.color = "";
       } else {
         ramLine.textContent = load.ram_used_gb + " of " + load.ram_total_gb + " GB";
         const hot = Number(load.ram_percent || 0) >= 90;
