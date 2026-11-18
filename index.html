@@ -2187,11 +2187,25 @@ function jvBase(points, days) {
   return pick;
 }
 
-function jvChange(points, days) {
+// Money the owner paid in during the window did not come from the market, so
+// the savings plan's own purchases are counted and taken back out again.
+function jvFlows(plan, from, to) {
+  const amount = plan && typeof plan.monthly === "number" ? plan.monthly : 0;
+  let total = 0, count = 0;
+  for (const day of (plan && plan.dates) || []) {
+    if (day > from && day <= to) { total += amount; count += 1; }
+  }
+  return { amount: total, count: count };
+}
+
+function jvChange(points, days, plan) {
   const base = jvBase(points, days);
   if (!base) return null;
-  const change = points[points.length - 1].value - base.value;
-  return { change: change, pct: base.value ? (change / base.value) * 100 : null };
+  const last = points[points.length - 1];
+  const flows = jvFlows(plan, base.date, last.date);
+  const change = last.value - base.value - flows.amount;
+  return { change: change, pct: base.value ? (change / base.value) * 100 : null,
+    flows: flows };
 }
 
 function jvSigned(amount, currency) {
@@ -2206,14 +2220,14 @@ function jvPctText(pct) {
   return sign + Math.abs(pct).toFixed(2).replace(".", ",") + "%";
 }
 
-function jvChart(history, currency) {
+function jvChart(history, currency, plan) {
   const points = (history || []).filter((p) => typeof p.value === "number" && jvDay(p.date))
     .slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   if (!points.length) return jvEmpty("the line starts with its first day");
   const last = points[points.length - 1];
   const pick = HOLD_PERIODS.find((row) => row[0] === HOLD_PERIOD) || HOLD_PERIODS[2];
   const base = jvBase(points, pick[2]);
-  const shown = jvChange(points, pick[2]);
+  const shown = jvChange(points, pick[2], plan);
   const part = base ? points.slice(points.indexOf(base)) : points;
   const values = part.map((p) => p.value);
   const top = Math.max(...values);
@@ -2241,7 +2255,7 @@ function jvChart(history, currency) {
 
   const buttons = HOLD_PERIODS.map((period) => {
     const [key, label, days] = period;
-    const row = jvChange(points, days);
+    const row = jvChange(points, days, plan);
     const from = row ? jvBase(points, days) : null;
     const tone = row && row.change > 0 ? "jv-gain" : row && row.change < 0 ? "jv-loss" : "";
     return '<button type="button" class="jv-eq-period' + (key === pick[0] ? " active" : "") +
@@ -2257,7 +2271,9 @@ function jvChart(history, currency) {
     ? '<span class="jv-eq-change">' + label + " — the line needs two days</span>"
     : shown
     ? '<span class="jv-eq-change' + tone + '">' + label + " " +
-      jvPctText(shown.pct) + " " + smEsc(jvSigned(shown.change, currency)) + "</span>"
+      jvPctText(shown.pct) + " " + smEsc(jvSigned(shown.change, currency)) +
+      (shown.flows.count ? " · uden " + shown.flows.amount.toLocaleString("da-DK") +
+        " kr indskud" : "") + "</span>"
     : '<span class="jv-eq-change">' + label + " — not that far back yet</span>";
 
   return '<div class="jv-eq">' +
@@ -2330,7 +2346,7 @@ function jvHoldings(d) {
     ? pos.slice(0, 8).map((p) => jvPosRow(p, exported)).join("")
     : jvEmpty("no open positions")) + jvNoteRow(exported ? d.note : "");
   const chart = $("jv-chart");
-  if (chart) chart.innerHTML = jvChart(d.history, d.currency);
+  if (chart) chart.innerHTML = jvChart(d.history, d.currency, d.plan);
 }
 
 async function holdLoad() {
