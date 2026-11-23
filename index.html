@@ -720,6 +720,7 @@
             <div class="row"><span>Orca app</span><span id="orca-app"><span class="pill idle">…</span></span></div>
             <div class="row"><span>Orca Web</span><span id="orca-web"><span class="pill idle">…</span></span></div>
             <div class="row"><span>Uptime</span><span id="orca-uptime">–</span></div>
+            <div class="row"><span>Panes now</span><span id="orca-panes">–</span></div>
             <div class="row"><span>Tasks done today</span><span id="orca-tasks">–</span></div>
             <div class="row"><span>Port</span><span id="orca-port">–</span></div>
           </div>
@@ -1526,6 +1527,28 @@ async function smLoadOrca() {
           `${tasks.completed_total} completed in total`;
       }
     }
+    // Counted from the same file as the list below, so a live pane cannot read
+    // as "0 tasks done" with nothing to explain the contradiction.
+    const panes = d.panes || {};
+    const panesEl = document.getElementById("orca-panes");
+    if (panesEl) {
+      if (!panes.available || !panes.counts) {
+        panesEl.textContent = "unknown";
+        panesEl.title = panes.note || "Orca's live status could not be read";
+      } else {
+        const c = panes.counts;
+        const minutes = Math.round((panes.quiet_seconds || 1800) / 60);
+        const parts = [];
+        if (c.working) parts.push(c.working + " working");
+        if (c.asked) parts.push(c.asked + " asked");
+        if (c.done) parts.push(c.done + " done");
+        if (c.quiet) parts.push(c.quiet + " quiet");
+        panesEl.textContent = parts.length ? parts.join(" · ") : "none";
+        panesEl.title = parts.length
+          ? "panes that reported in the last " + minutes + " minutes"
+          : "no pane has reported in the last " + minutes + " minutes";
+      }
+    }
     const s = d.session;
     const note = document.getElementById("orca-live-note");
     if (!d.available || !s) {
@@ -1582,6 +1605,8 @@ async function smLoadOrca() {
       document.getElementById("orca-live-title").textContent = "Unknown";
       const tasksEl = document.getElementById("orca-tasks");
       if (tasksEl) { tasksEl.textContent = "–"; tasksEl.title = ""; }
+      const panesEl = document.getElementById("orca-panes");
+      if (panesEl) { panesEl.textContent = "–"; panesEl.title = ""; }
       list.innerHTML = '<div class="item dim">no answer from the Mac yet</div>';
     }
   }
