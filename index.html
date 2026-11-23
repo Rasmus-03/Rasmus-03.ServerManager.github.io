@@ -720,7 +720,7 @@
             <div class="row"><span>Orca app</span><span id="orca-app"><span class="pill idle">…</span></span></div>
             <div class="row"><span>Orca Web</span><span id="orca-web"><span class="pill idle">…</span></span></div>
             <div class="row"><span>Uptime</span><span id="orca-uptime">–</span></div>
-            <div class="row"><span>Tasks today</span><span id="orca-tasks">–</span></div>
+            <div class="row"><span>Tasks done today</span><span id="orca-tasks">–</span></div>
             <div class="row"><span>Port</span><span id="orca-port">–</span></div>
           </div>
           <div id="orca-live" style="margin-top:12px">
@@ -1555,7 +1555,8 @@ async function smLoadOrca() {
                     ? smAgo(s.idle_seconds) : null].filter(Boolean);
     document.getElementById("orca-live-meta").textContent = meta.join(" · ");
     const kindLabel = { assistant: "reply", tool: "tool", user: "ask",
-                        state: stalled ? "stalled" : (s.state === "quiet" ? "quiet" : "now") };
+                        state: stalled ? "stalled" : (s.state === "quiet" ? "quiet"
+                          : d.live ? "now" : "last") };
     list.innerHTML = (d.recent || []).map((m) => (
       '<div class="item"><span class="dim" style="min-width:34px">' +
       smEsc(kindLabel[m.kind] || m.kind) + "</span>" +
