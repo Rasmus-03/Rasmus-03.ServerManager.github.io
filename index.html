@@ -721,7 +721,7 @@
             <div class="row"><span>Orca Web</span><span id="orca-web"><span class="pill idle">…</span></span></div>
             <div class="row"><span>Uptime</span><span id="orca-uptime">–</span></div>
             <div class="row"><span>Panes now</span><span id="orca-panes">–</span></div>
-            <div class="row"><span>Tasks done today</span><span id="orca-tasks">–</span></div>
+            <div class="row" id="orca-turns-row"><span>Turns today</span><span id="orca-turns">–</span></div>
             <div class="row"><span>Port</span><span id="orca-port">–</span></div>
           </div>
           <div id="orca-live" style="margin-top:12px">
@@ -1510,22 +1510,41 @@ async function smLoadOrca() {
     if (seq !== ORCA.seq) return; // a newer poll has already answered
     ORCA.seen = Date.now();
     ORCA.answered = true;
-    // How much delegated work Orca actually finished since midnight; the
-    // session list below can only say what it is doing now.
+    // Turns follow daily use: one message sent to an agent. The delegated task
+    // count only moves on the days a task actually ran, so it lives in this
+    // row's tooltip instead of claiming the line.
+    const turns = d.turns || {};
     const tasks = d.tasks || {};
-    const tasksEl = document.getElementById("orca-tasks");
-    if (tasksEl) {
-      if (tasks.available === false) {
-        tasksEl.textContent = "unknown";
-        tasksEl.title = tasks.note || "Orca's orchestration database could not be read";
-      } else if (tasks.completed_today === null || tasks.completed_today === undefined) {
-        tasksEl.textContent = "–";
-        tasksEl.title = "";
+    const turnsEl = document.getElementById("orca-turns");
+    if (turnsEl) {
+      const tip = [];
+      if (turns.available === false) {
+        turnsEl.textContent = "unknown";
+        tip.push(turns.note || "Orca's session index could not be read");
+      } else if (turns.turns_today === null || turns.turns_today === undefined) {
+        turnsEl.textContent = "–";
       } else {
-        tasksEl.textContent = String(tasks.completed_today);
-        tasksEl.title = `${tasks.completed_today} completed today · ` +
-          `${tasks.completed_total} completed in total`;
+        turnsEl.textContent = String(turns.turns_today);
+        const one = turns.turns_today === 1 ? "turn" : "turns";
+        tip.push(`${turns.turns_today} ${one} today · ${turns.turns_total} in the index`);
+        tip.push("a turn is one message you sent to an agent");
       }
+      // A month without a delegated run leaves the task count at a dead zero,
+      // so it is left out rather than reported as if it were today's news.
+      if (tasks.available === false) {
+        tip.push(tasks.note || "Orca's orchestration database could not be read");
+      } else if (tasks.recent !== false &&
+                 tasks.completed_today !== null && tasks.completed_today !== undefined) {
+        const one = tasks.completed_today === 1 ? "task" : "tasks";
+        tip.push(`${tasks.completed_today} ${one} done today · ` +
+          `${tasks.completed_total} done in total`);
+      }
+      turnsEl.title = tip.join(" · ");
+      // The same rule for the row itself: with no turn inside the window the
+      // number could only read 0, so the row steps aside until Orca is used
+      // again. An unreadable index is unknown, not idle, and stays visible.
+      const rowEl = document.getElementById("orca-turns-row");
+      if (rowEl) rowEl.style.display = turns.recent === false ? "none" : "";
     }
     // Counted from the same file as the list below, so a live pane cannot read
     // as "0 tasks done" with nothing to explain the contradiction.
@@ -1603,8 +1622,10 @@ async function smLoadOrca() {
     document.getElementById("orca-live-meta").textContent = unknownLine(ORCA);
     if (!ORCA.answered) {
       document.getElementById("orca-live-title").textContent = "Unknown";
-      const tasksEl = document.getElementById("orca-tasks");
-      if (tasksEl) { tasksEl.textContent = "–"; tasksEl.title = ""; }
+      const turnsEl = document.getElementById("orca-turns");
+      if (turnsEl) { turnsEl.textContent = "–"; turnsEl.title = ""; }
+      const rowEl = document.getElementById("orca-turns-row");
+      if (rowEl) rowEl.style.display = "";
       const panesEl = document.getElementById("orca-panes");
       if (panesEl) { panesEl.textContent = "–"; panesEl.title = ""; }
       list.innerHTML = '<div class="item dim">no answer from the Mac yet</div>';
