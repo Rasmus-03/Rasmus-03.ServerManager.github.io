@@ -2351,15 +2351,19 @@ function jvPct(p) {
   return '<span class="jv-' + kind + '">' + (n > 0 ? "+" : "") + n.toFixed(2) + "%</span>";
 }
 
-// A row from the API carries a value and a day's move; a row from an export
-// carries only what was paid, because the export has no prices in it.
-function jvPosRow(p, exported) {
-  const move = exported || p.day_pct === null || p.day_pct === undefined
-    ? "" : " " + jvPct(p.day_pct);
-  const right = exported ? jvMoney(p.cost, p.currency) : jvMoney(p.value, p.currency);
+// A row carries the holding's value in kroner — from the API, or from today's
+// price for a typed list — and the move since the close before it. Only a
+// holding with no price at all falls back to what was paid for it.
+function jvPosRow(p) {
+  const dkk = typeof p.value_dkk === "number" ? p.value_dkk : null;
+  const move = p.day_pct === null || p.day_pct === undefined ? "" : " " + jvPct(p.day_pct);
+  const right = dkk !== null ? jvMoney(dkk, "DKK")
+    : jvMoney(p.value !== null && p.value !== undefined ? p.value : p.cost, p.currency);
+  const when = dkk !== null && p.price_date
+    ? ' title="pris ' + smEsc(jvShortDay(p.price_date)) + '"' : "";
   return '<div class="jv-event"><span class="jv-when">' + smEsc(String(p.qty)) + "×</span>" +
     '<span class="jv-what">' + smEsc(p.name) + move + "</span>" +
-    '<span class="jv-cal">' + smEsc(right) + "</span></div>";
+    '<span class="jv-cal"' + when + ">" + smEsc(right) + "</span></div>";
 }
 
 // One point per day, drawn as a line: the figures keep the left side of the
@@ -2581,6 +2585,10 @@ function jvHoldings(d) {
     return;
   }
   const pos = d.positions || [];
+  // A fund can report a day or two late, so naming only the newest date would
+  // hide the older rows; the row says how many of them there are.
+  const stale = pos.filter((p) => typeof p.value_dkk === "number" && p.price_date &&
+    p.price_date !== d.price_date).length;
   // An export has quantities and what was paid, but no market value: saying
   // that is better than printing a zero that reads like a total loss.
   const exported = d.source === "csv" || d.source === "typed";
@@ -2595,7 +2603,8 @@ function jvHoldings(d) {
     ...(d.cash_dkk ? [["Cash", d.cash_dkk.toFixed(2).replace(".", ",") + " DKK"]] : []),
     ...(d.plan ? [["Plan", jvMoney(d.plan.monthly, "DKK") + "/md fra " +
       jvShortDay(d.plan.since)]] : []),
-    [d.source === "typed" ? "List" : "Export", d.updated || "—"],
+    ["Prices", (d.price_date ? jvShortDay(d.price_date) : "–") +
+      (stale ? " · " + stale + " ældre" : "")],
     ["Source", d.source === "typed" ? "Your own list, priced daily" : "CSV export, no API"],
   ] : [
     ["Value", jvMoney(d.total_value, d.currency)],
@@ -2605,7 +2614,7 @@ function jvHoldings(d) {
   ]).map(([k, v]) => '<div class="jv-row"><span>' + smEsc(k) + '</span><span class="jv-v">' +
     (k === "P/L" ? v : smEsc(v)) + "</span></div>").join("");
   $("jv-hold").innerHTML = (pos.length
-    ? pos.slice(0, 8).map((p) => jvPosRow(p, exported)).join("")
+    ? pos.slice(0, 8).map((p) => jvPosRow(p)).join("")
     : jvEmpty("no open positions")) + jvNoteRow(exported ? d.note : "");
   const chart = $("jv-chart");
   if (chart) chart.innerHTML = jvChart(d.history, d.currency, d.plan);
