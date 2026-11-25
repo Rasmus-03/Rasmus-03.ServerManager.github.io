@@ -133,6 +133,10 @@
   .btn.block{width:100%;justify-content:center}
   .msg{font-size:11.5px;color:var(--secondary)}
   .msg.err{color:var(--red)}
+  /* The page is showing the last sealed snapshot, not live figures. */
+  .snap-banner{padding:9px 12px;margin:0 0 12px;border-radius:10px;font-size:12px;
+    line-height:1.4;color:var(--orange);background:rgba(255,159,10,.1);
+    border:1px solid rgba(255,159,10,.34)}
   .quick-actions{display:flex;flex-direction:column;gap:8px}
 
   /* ── log box (Color.black + monospaced, as LogBox) ───── */
@@ -499,6 +503,8 @@
   </aside>
 
   <main class="main">
+    <!-- Shown only when the tunnel is blocked and the sealed copy is on screen. -->
+    <div class="snap-banner" id="snap-banner" style="display:none"></div>
     <div class="page-title">
       <div>
         <h1 id="page-title">Dashboard</h1>
@@ -967,6 +973,20 @@ const LS_SESSION = "sm.session";
 const TUNNEL = { "ngrok-skip-browser-warning": "1" };
 let API = API_BASE;
 let SESSION = localStorage.getItem(LS_SESSION) || "";
+// The Mac also publishes its figures next to this page, sealed with the
+// dashboard password, for networks that block the tunnel outright. The key is
+// kept here as well, so a reload on such a network still opens the file.
+const LS_SNAPKEY = "sm.snapkey";
+const SNAP_FILE = "snapshot.json";
+const SNAP_AAD = "sm-dashboard-snapshot-v1";
+const SNAP_PATHS = ["/api/status", "/api/portfolio", "/api/briefing", "/api/inbox",
+                    "/api/orca/activity", "/api/backups", "/api/jarvis/status"];
+const SNAP_LIVE_MS = 12000;      // a blocked tunnel must not hold the panels
+const SNAP_RETRY_MS = 60000;     // how often a missing file is asked for again
+let SNAP_KEY = localStorage.getItem(LS_SNAPKEY) || "";
+let SNAP = null;                 // the snapshot opened in this tab
+let SNAP_AT = "";               // when the Mac published it
+let SNAP_TRIED = 0;              // ms of the last read of the file
 let TAB = "dashboard";
 
 const TITLES = {
@@ -1026,16 +1046,135 @@ function showConnect(show, message) {
 function disconnect(message) {
   SESSION = "";
   localStorage.removeItem(LS_SESSION);
+  // Signing out means this browser may not show the figures any more, not even
+  // the sealed copy: the key goes with the session.
+  SNAP_KEY = "";
+  SNAP = null;
+  localStorage.removeItem(LS_SNAPKEY);
+  snapBanner(false);
   showConnect(true, message || "");
 }
 
+const b64Bytes = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const hexBytes = (s) => Uint8Array.from(String(s).match(/../g) || [],
+  (h) => parseInt(h, 16));
+
+// The Mac stores a PBKDF2 hash of the password; the page computes the same hash
+// from the password typed at login, then stretches that once more into the key
+// the snapshot was sealed with. A wrong password fails the cipher's own check.
+async function snapDerive(password, env) {
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2",
+    false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: hexBytes(env.kdf.salt),
+      iterations: env.kdf.iterations, hash: "SHA-256" }, base, 256);
+  const hashHex = Array.from(new Uint8Array(bits),
+    (b) => b.toString(16).padStart(2, "0")).join("");
+  const stretched = await crypto.subtle.importKey("raw", enc.encode(hashHex),
+    "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: hexBytes(env.salt2), iterations: env.stretch,
+      hash: "SHA-256" }, stretched, { name: "AES-GCM", length: 256 }, true,
+    ["decrypt"]);
+  return new Uint8Array(await crypto.subtle.exportKey("raw", key));
+}
+
+function snapBanner(on, text) {
+  const el = $("snap-banner");
+  if (!el) return;
+  el.style.display = on ? "block" : "none";
+  if (text) el.textContent = text;
+}
+
+function snapWhen() {
+  const when = SNAP_AT ? new Date(SNAP_AT) : null;
+  return when && !isNaN(when.getTime()) ? smClock(SNAP_AT) : "an unknown time";
+}
+
+function snapActive() { return Boolean(SNAP); }
+
+// Open the sealed file: with the key this browser already holds, or with the
+// password just typed. Returns the payloads, or null when nothing opens.
+async function snapOpen(password) {
+  let env;
+  try {
+    const res = await dashFetch(SNAP_FILE + "?t=" + Date.now(), { cache: "no-store" });
+    if (!res.ok) return null;
+    env = await res.json();
+  } catch (e) {
+    return null;                       // no file, or GitHub did not answer
+  }
+  if (!env || !env.ct || !env.kdf) return null;
+  let raw = SNAP_KEY ? b64Bytes(SNAP_KEY) : null;
+  const fresh = !raw;
+  if (!raw) {
+    try { raw = await snapDerive(password || "", env); } catch (e) { return null; }
+  }
+  try {
+    const key = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+    const plain = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: b64Bytes(env.iv),
+        additionalData: new TextEncoder().encode(SNAP_AAD) },
+      key, b64Bytes(env.ct));
+    SNAP = JSON.parse(new TextDecoder().decode(plain));
+    SNAP_AT = env.published_at || "";
+    if (fresh) {
+      SNAP_KEY = btoa(String.fromCharCode(...raw));
+      localStorage.setItem(LS_SNAPKEY, SNAP_KEY);
+    }
+    return SNAP;
+  } catch (e) {
+    if (fresh) return null;            // the typed password was not the one
+    SNAP_KEY = "";                     // a stored key went stale; try the password
+    localStorage.removeItem(LS_SNAPKEY);
+    return password ? snapOpen(password) : null;
+  }
+}
+
+// One answer in the shape the panels already parse, or null when the snapshot
+// does not carry this path.
+async function snapGet(path, password) {
+  if (!SNAP && Date.now() - SNAP_TRIED > SNAP_RETRY_MS) {
+    SNAP_TRIED = Date.now();
+    await snapOpen(password);
+  }
+  const body = SNAP && SNAP.data ? SNAP.data[path] : null;
+  if (!body) return null;
+  snapBanner(true, "Snapshot from " + snapWhen() + ". The Mac cannot be reached " +
+    "from this network, so these are the figures it last published \u2014 read-only.");
+  return { ok: true, status: 200, json: async () => body };
+}
+
+function snapTimeout(ms) {
+  if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) return AbortSignal.timeout(ms);
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), ms);
+  return ctrl.signal;
+}
+
 async function api(path, opts) {
-  const res = await dashFetch(API.replace(/\/+$/, "") + path, {
-    ...(opts || {}),
-    headers: { ...TUNNEL, ...((opts && opts.headers) || {}), Authorization: "Bearer " + SESSION },
-  });
-  if (res.status === 401) { disconnect("Session expired — connect again."); throw new Error("unauthorized"); }
-  return res;
+  const method = ((opts && opts.method) || "GET").toUpperCase();
+  const cached = method === "GET" && SNAP_PATHS.includes(path);
+  // Once the snapshot is what is on screen, the tunnel is known to be blocked,
+  // so a short wait is enough before falling back to the file again.
+  const wait = snapActive() ? 2500 : SNAP_LIVE_MS;
+  try {
+    const res = await dashFetch(API.replace(/\/+$/, "") + path, {
+      ...(opts || {}),
+      ...(cached ? { signal: snapTimeout(wait) } : {}),
+      headers: { ...TUNNEL, ...((opts && opts.headers) || {}), Authorization: "Bearer " + SESSION },
+    });
+    if (res.status === 401) { disconnect("Session expired — connect again."); throw new Error("unauthorized"); }
+    return res;
+  } catch (e) {
+    // A write cannot be done from a file, and an answer the Mac gave must keep
+    // its own words; only a request that never arrived falls back.
+    if (method !== "GET" || !(e instanceof NoAnswer || (e && e.name === "AbortError"))) throw e;
+    const fromFile = await snapGet(path);
+    if (fromFile) return fromFile;
+    throw e;
+  }
 }
 
 $("connect-form").addEventListener("submit", async (e) => {
@@ -1059,6 +1198,21 @@ $("connect-form").addEventListener("submit", async (e) => {
     $("net-base").textContent = API;
     getStatus(); getLog(); smLoadOrca(); briefLoad();
   } catch (err) {
+    // The Mac could not be reached, but the password just typed may be the one
+    // the published snapshot was sealed with: that is a way in without it.
+    if (err instanceof NoAnswer) {
+      const opened = await snapOpen($("password").value);
+      if (opened) {
+        $("password").value = "";
+        showConnect(false);
+        $("net-base").textContent = "the last published snapshot";
+        getStatus(); smLoadOrca(); briefLoad(); inLoad();
+        return;
+      }
+      $("connect-msg").textContent = "The Mac is not reachable from this network, " +
+        "and the last snapshot did not open with this password.";
+      return;
+    }
     $("connect-msg").textContent = err.message || "Could not reach the backend.";
   } finally {
     btn.disabled = false;
